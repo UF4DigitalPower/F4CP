@@ -12,10 +12,10 @@ QQ 交流群：871340927
 
 F4CP 数字电源项目分为两个部分：
 
-1. [上位机软件 F4CP](https://github.com/UF4OVER/UF4DigitalPower)
-2. [下位机固件 UF4DigitalPower](https://github.com/UF4OVER/UF4DigitalPower_Firmware)
+1. 硬件下位机链接: [UF4DigitalPower](https://github.com/UF4DigitalPower/UF4DigitalPower)<br>
+2. 硬件上位机链接: [UF4UpperPower](https://github.com/UF4DigitalPower/UF4UpperPower)<br>
 
-下位机固件、硬件结构、控制环路、Buck/Mix/Boost 模式、保护逻辑和 C 代码说明请移步[下位机固件 UF4DigitalPower](https://github.com/UF4OVER/UF4DigitalPower_Firmware)
+下位机固件、硬件结构、控制环路、Buck/Mix/Boost 模式、保护逻辑和 C 代码说明请移步[下位机固件UF4DigitalPower](https://github.com/UF4DigitalPower/UF4DigitalPower)
 
 ## 实物简介
 
@@ -29,7 +29,7 @@ F4CP 数字电源项目分为两个部分：
 - 板载调试：STM32F103 DAPLink，可配合上位机完成固件烧录
 
 实物图：
-
+![F4CP power board all](https://img.hepi.ng/v2/ABEaoWJ.jpeg)
 ![F4CP power board front](https://img.hepi.ng/v2/NCb81Dz.jpeg)
 ![F4CP power board side](https://img.hepi.ng/v2/VqxCobD.jpeg)
 ![F4CP power board test](https://img.hepi.ng/v2/3x1zBgu.jpeg)
