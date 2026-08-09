@@ -20,6 +20,7 @@ from .page_daplink import *
 from .page_home import *
 from . import page_power as _page_power
 from .page_power import *
+from .page_parameters import *
 from .page_settings import *
 from .page_battery import *
 from .page_version import *

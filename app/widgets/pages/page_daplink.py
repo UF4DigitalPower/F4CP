@@ -36,6 +36,7 @@ from qfluentwidgets import (
 )
 
 from app.ctrl import DaplinkPageController
+from app.widgets.components import PageHeader
 from config import CTX, get_logger
 
 logger = get_logger("DaplinkPage")
@@ -63,8 +64,13 @@ class DaplinkPage(ScrollArea):
         self.vBoxLayout.setContentsMargins(24, 24, 24, 24)
         self.vBoxLayout.setSpacing(12)
 
-        self.titleLabel = TitleLabel(self.view)
-        self.vBoxLayout.addWidget(self.titleLabel)
+        self.header = PageHeader(
+            "DAPLink 下载",
+            "选择调试器、目标芯片和固件文件，当前仅保留界面层。",
+            self.view,
+        )
+        self.titleLabel = self.header.titleLabel
+        self.vBoxLayout.addWidget(self.header)
 
         self._initConnectionCard()
         self._initInfoCard()

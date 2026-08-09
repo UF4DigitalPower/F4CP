@@ -60,6 +60,7 @@ from qfluentwidgets import (
 
 from app.ctrl import DevicePageController
 from app.manager import StyleSheet
+from app.widgets.components import PageHeader
 from app.session import (
     ErrorEvent,
     PowerBluetoothSession,
@@ -225,24 +226,16 @@ class DevicePage(ScrollArea):
         self._applyMode()
 
     def _initHeader(self):
-        header = QWidget(self.scrollWidget)
-        layout = QHBoxLayout(header)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(12)
-
-        titleBox = QWidget(header)
-        titleLayout = QVBoxLayout(titleBox)
-        titleLayout.setContentsMargins(0, 0, 0, 0)
-        titleLayout.setSpacing(2)
-        self.titleLabel = TitleLabel("串口与 UF4COM 调试", titleBox)
-        self.subtitleLabel = BodyLabel("面向 UF4 数字电源的串口连接、Raw 收发和 UF4COM 组包调试。", titleBox)
-        titleLayout.addWidget(self.titleLabel)
-        titleLayout.addWidget(self.subtitleLabel)
-
-        self.statusPill = StatusPill(header)
-        layout.addWidget(titleBox, 1)
-        layout.addWidget(self.statusPill, 0, Qt.AlignTop)
-        self.vBoxLayout.addWidget(header)
+        self.header = PageHeader(
+            "串口与 UF4COM 调试",
+            "面向 UF4 数字电源的串口连接、Raw 收发和 UF4COM 组包调试。",
+            self.scrollWidget,
+        )
+        self.titleLabel = self.header.titleLabel
+        self.subtitleLabel = self.header.subtitleLabel
+        self.statusPill = StatusPill(self.header)
+        self.header.addAction(self.statusPill)
+        self.vBoxLayout.addWidget(self.header)
 
     def _initConnectionCard(self):
         self.connectionCard = PageCard("连接", "选择串口或蓝牙目标，连接状态会实时同步到右侧。", self.scrollWidget)

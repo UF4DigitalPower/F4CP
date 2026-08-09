@@ -18,6 +18,7 @@ from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget
 
 from config import AUTHOR, FEEDBACK_URL, HELP_URL, VERSION, YEAR, cfg
+from app.widgets.components import PageHeader
 from app.manager import (
     FontOption,
     StyleSheet,
@@ -27,7 +28,7 @@ from app.manager import (
     save_font_selection,
 )
 from qfluentwidgets import FluentIcon as FIF
-from qfluentwidgets import InfoBar, LargeTitleLabel
+from qfluentwidgets import InfoBar
 from qfluentwidgets import (
     BodyLabel,
     ComboBox,
@@ -89,7 +90,8 @@ class SettingsPage(ScrollArea):
         self._fontOptions: list[FontOption] = []
         self._fontOptionsLoaded = False
 
-        self.settingLabel = LargeTitleLabel('设置', self)
+        self.header = PageHeader("设置", "应用外观、启动行为和项目信息。", self.scrollWidget)
+        self.settingLabel = self.header.titleLabel
 
         self.appearanceGroup = SettingCardGroup('外观', self.scrollWidget)
         self.themeCard = ComboSettingCard(FIF.BRUSH, '应用主题', '切换浅色、深色或跟随系统', self.appearanceGroup)
@@ -128,7 +130,7 @@ class SettingsPage(ScrollArea):
     def __initWidget(self):
         self.resize(1000, 800)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setViewportMargins(0, 86, 0, 20)
+        self.setViewportMargins(0, 0, 0, 20)
         self.setWidget(self.scrollWidget)
         self.setWidgetResizable(True)
         self.setObjectName('SettingsPage')
@@ -143,8 +145,6 @@ class SettingsPage(ScrollArea):
         self.__setCustomColorCardTexts('主题色', '调整应用的主色调')
 
     def __initLayout(self):
-        self.settingLabel.move(36, 30)
-
         self.appearanceGroup.addSettingCard(self.themeCard)
         self.appearanceGroup.addSettingCard(self.themeColorCard)
         self.appearanceGroup.addSettingCard(self.fontCard)
@@ -161,7 +161,8 @@ class SettingsPage(ScrollArea):
         self.supportGroup.addSettingCard(self.aboutCard)
 
         self.expandLayout.setSpacing(24)
-        self.expandLayout.setContentsMargins(36, 10, 36, 0)
+        self.expandLayout.setContentsMargins(36, 24, 36, 0)
+        self.expandLayout.addWidget(self.header)
         self.expandLayout.addWidget(self.appearanceGroup)
         self.expandLayout.addWidget(self.behaviorGroup)
         self.expandLayout.addWidget(self.projectGroup)

@@ -13,7 +13,7 @@
 
 import sys
 from PyQt5.QtGui import QCloseEvent
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication
 
 from config import get_logger,cfg
@@ -26,19 +26,13 @@ from app.window import Window
 class Application(Window):
     def __init__(self):
         super().__init__()
-        QTimer.singleShot(150, self._checkUpdateOnStartUp)
-
-    def _checkUpdateOnStartUp(self):
-        """按用户设置决定启动后是否自动检查应用更新。"""
-        self.homeInterface.requestUpdateCheck(manual=False)
+        self.setFixedSize(1500,1200)
 
     def close(self):
         logger.warning("Application closed")
         super().close()
 
     def closeEvent(self, event: QCloseEvent):
-        """窗口关闭前先让电源页停掉串口和轮询，避免后台还在收发。"""
-        self.powerInterface.shutdown()
         super().closeEvent(event)
 
 if __name__ == "__main__":

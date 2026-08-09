@@ -1,33 +1,27 @@
 # -*- coding: utf-8 -*-
-"""Shared UF4COM protocol facade used by the power and serial pages."""
-
 from __future__ import annotations
 
-from .tvlcom_crc import crc16_ccitt
-from .tvlcom_frame import MAX_PROTOCOL_BODY_LEN, TvlcomFrameParser, build_frame, extract_frame_from_buffer
-from .tvlcom_stream import pack_stream_start_request
-from .tvlcom_tlv import (
-    TvlcomTlvItem,
-    decode_tlvs,
-    encode_tlv,
-    ensure_readable,
-    ensure_writable,
-    iter_tlv_items,
-    pack_read_request,
-)
+from dataclasses import dataclass
 
-__all__ = [
-    "MAX_PROTOCOL_BODY_LEN",
-    "TvlcomFrameParser",
-    "TvlcomTlvItem",
-    "build_frame",
-    "crc16_ccitt",
-    "decode_tlvs",
-    "encode_tlv",
-    "ensure_readable",
-    "ensure_writable",
-    "extract_frame_from_buffer",
-    "iter_tlv_items",
-    "pack_read_request",
-    "pack_stream_start_request",
-]
+
+@dataclass(frozen=True)
+class TvlcomTlvItem:
+    type_id: int
+    value: int | bytes | None = None
+
+
+class TvlcomFrameParser:
+    def feed(self, data: bytes):
+        return []
+
+
+def build_frame(command: int, sequence: int, payload: bytes = b"", flags: int = 0) -> bytes:
+    return b""
+
+
+def encode_tlv(type_id: int, value) -> bytes:
+    return b""
+
+
+def iter_tlv_items(payload: bytes, strict: bool = True):
+    return iter(())

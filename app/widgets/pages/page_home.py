@@ -29,7 +29,6 @@ from qfluentwidgets import (
     VerticalSeparator,
     setFont, ScrollArea, MessageBox,
 )
-
 from config import CTX, AppIconPath
 from app.manager import (
     FirmwareCheckFinishedEvent,
@@ -380,8 +379,8 @@ class HomePage(ScrollArea):
         self.scrollWidget.setObjectName("homeScrollWidget")
 
         self.vBoxLayout = QVBoxLayout(self.scrollWidget)
-        self.vBoxLayout.setContentsMargins(0, 0, 15, 0)
-        self.vBoxLayout.setSpacing(10)
+        self.vBoxLayout.setContentsMargins(24, 24, 24, 24)
+        self.vBoxLayout.setSpacing(12)
 
         self.appCard = AppInfoCard(self.scrollWidget)
         self.firmwareUpdateCard = FirmwareUpdateCard(self.scrollWidget)

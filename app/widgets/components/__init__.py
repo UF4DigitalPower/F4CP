@@ -12,4 +12,5 @@
 # -------------------------------
 
 from .dynamicisland import DynamicIsland
+from .page_header import PageHeader
 from .splashscreen import F4SplashScreen, createSplashScreen

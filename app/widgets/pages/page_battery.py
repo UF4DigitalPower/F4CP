@@ -34,6 +34,7 @@ from qfluentwidgets import (
     setFont,
     ProgressBar,
 )
+from app.widgets.components import PageHeader
 
 from app.manager import StyleSheet
 from config import cfg, CTX
@@ -420,8 +421,13 @@ class BatteryPage(ScrollArea):
         self.rootLayout.setContentsMargins(24, 24, 24, 24)
         self.rootLayout.setSpacing(12)
 
-        self.titleLabel = TitleLabel(self.scrollWidget)
-        self.rootLayout.addWidget(self.titleLabel)
+        self.header = PageHeader(
+            "电池组面板",
+            "查看电池组连接、容量、健康度和充放电状态。",
+            self.scrollWidget,
+        )
+        self.titleLabel = self.header.titleLabel
+        self.rootLayout.addWidget(self.header)
 
         self._initSummaryCard()
         self._initCellOverviewCard()

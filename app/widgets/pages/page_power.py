@@ -38,6 +38,7 @@ from app.session import (
     SerialSession, listSerialPorts, pretty_faults,
     build_status,
 )
+from app.widgets.components import PageHeader
 from app.widgets.chart.chart_model import ChartModel
 from app.widgets.chart.realtime_chart_widget import RealtimeChartWidget
 from config import CTX, get_logger
@@ -87,8 +88,8 @@ class MetricCard(CardWidget):
         self.unitLabel.setWordWrap(False)
         self.unitLabel.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignBottom)
         self.unitLabel.setMinimumWidth(44)
-        setFont(self.valueLabel, 28, QFont.DemiBold)
-        setFont(self.unitLabel, 18, QFont.DemiBold)
+        setFont(self.valueLabel, 24, QFont.DemiBold)
+        setFont(self.unitLabel, 15, QFont.DemiBold)
 
         value_row = QHBoxLayout()
         value_row.setContentsMargins(0, 0, 0, 0)
@@ -97,12 +98,13 @@ class MetricCard(CardWidget):
         value_row.addWidget(self.unitLabel)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 16, 18, 16)
-        layout.setSpacing(8)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(5)
         layout.addWidget(self.titleLabel)
         layout.addLayout(value_row)
         layout.addWidget(self.extraLabel)
-        self.setMinimumHeight(138)
+        self.setMinimumHeight(108)
+        self.setMaximumHeight(128)
         self.refreshTheme()
 
     def setMetric(self, metric: _MetricValue) -> None:
@@ -167,14 +169,15 @@ class StatusValueWidget(QWidget):
         self.valueLabel.setWordWrap(True)
         self.valueLabel.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         setFont(self.titleLabel, 12)
-        setFont(self.valueLabel, 20, QFont.DemiBold)
+        setFont(self.valueLabel, 14, QFont.DemiBold)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 10, 12, 10)
-        layout.setSpacing(4)
+        layout.setContentsMargins(10, 7, 10, 7)
+        layout.setSpacing(2)
         layout.addWidget(self.titleLabel)
         layout.addWidget(self.valueLabel, 1)
-        self.setMinimumHeight(96)
+        self.setMinimumHeight(62)
+        self.setMinimumWidth(108)
         self.refreshTheme()
 
     def setValue(self, value: str) -> None:
@@ -209,6 +212,8 @@ class ParameterEditor(CardWidget):
         self.ocp = self._createDoubleSelector("A", 0.0, 80.0, 0.1)
         self.otp = self._createDoubleSelector("°C", 0.0, 150.0, 1.0)
         self.fan = self._createFanSelector()
+        for editor in (self.ovp, self.ocp, self.otp, self.fan):
+            editor.setVisible(False)
 
         self._editors = (
             self.outputVoltage,
@@ -232,14 +237,14 @@ class ParameterEditor(CardWidget):
         self.outputSwitch.setOffText("输出关闭")
         self.applyOutputButton = PrimaryPushButton(FIF.ACCEPT, "应用输出", self)
         self.applyProtectButton = PushButton(FIF.SAVE, "应用保护", self)
-        self.outputSwitch.setFixedHeight(38)
-        self.applyOutputButton.setFixedHeight(38)
-        self.applyProtectButton.setFixedHeight(38)
-        self.applyOutputButton.setMinimumWidth(110)
-        self.applyProtectButton.setMinimumWidth(110)
+        self.outputSwitch.setFixedHeight(32)
+        self.applyOutputButton.setFixedHeight(32)
+        self.applyProtectButton.setFixedHeight(32)
+        self.applyOutputButton.setMinimumWidth(96)
+        self.applyProtectButton.setMinimumWidth(96)
+        self.applyProtectButton.setVisible(False)
         self._sectionLabels = [
             BodyLabel("输出设定", self),
-            BodyLabel("保护阈值", self),
         ]
 
         outputGrid = QGridLayout()
@@ -251,33 +256,20 @@ class ParameterEditor(CardWidget):
         outputGrid.setColumnStretch(0, 1)
         outputGrid.setColumnStretch(1, 1)
 
-        protectGrid = QGridLayout()
-        protectGrid.setContentsMargins(0, 0, 0, 0)
-        protectGrid.setHorizontalSpacing(10)
-        protectGrid.setVerticalSpacing(8)
-        protectGrid.addWidget(self._selectorBlock("过压保护", self.ovp), 0, 0)
-        protectGrid.addWidget(self._selectorBlock("过流保护", self.ocp), 0, 1)
-        protectGrid.addWidget(self._selectorBlock("过温保护", self.otp), 1, 0)
-        protectGrid.addWidget(self._selectorBlock("风扇设定", self.fan), 1, 1)
-        protectGrid.setColumnStretch(0, 1)
-        protectGrid.setColumnStretch(1, 1)
-
         control = QHBoxLayout()
         control.setContentsMargins(0, 6, 0, 0)
         control.setSpacing(10)
         control.addWidget(self.outputSwitch)
         control.addStretch(1)
         control.addWidget(self.applyOutputButton)
-        control.addWidget(self.applyProtectButton)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(14)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(6)
         layout.addWidget(self.titleLabel)
         layout.addWidget(self._sectionLabels[0])
         layout.addLayout(outputGrid)
-        layout.addWidget(self._sectionLabels[1])
-        layout.addLayout(protectGrid)
+        layout.addStretch(1)
         layout.addLayout(control)
         self.refreshTheme()
 
@@ -287,8 +279,8 @@ class ParameterEditor(CardWidget):
         selector.setDecimals(3)
         selector.setSingleStep(step)
         selector.setSuffix(f" {suffix}")
-        selector.setFixedHeight(40)
-        selector.setMinimumWidth(132)
+        selector.setFixedHeight(32)
+        selector.setMinimumWidth(104)
         selector.setAlignment(Qt.AlignmentFlag.AlignRight)
         selector.setAccelerated(True)
         return selector
@@ -298,8 +290,8 @@ class ParameterEditor(CardWidget):
         selector.setRange(0, 1000)
         selector.setSingleStep(10)
         selector.setSuffix(" /1000")
-        selector.setFixedHeight(40)
-        selector.setMinimumWidth(132)
+        selector.setFixedHeight(32)
+        selector.setMinimumWidth(104)
         selector.setAlignment(Qt.AlignmentFlag.AlignRight)
         selector.setAccelerated(True)
         return selector
@@ -310,11 +302,11 @@ class ParameterEditor(CardWidget):
         label = CaptionLabel(title, block)
         setFont(label, 12)
         layout = QVBoxLayout(block)
-        layout.setContentsMargins(12, 10, 12, 10)
-        layout.setSpacing(6)
+        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setSpacing(3)
         layout.addWidget(label)
         layout.addWidget(selector)
-        block.setMinimumHeight(92)
+        block.setMinimumHeight(60)
         self._selectorBlocks.append((block, label))
         return block
 
@@ -400,11 +392,13 @@ class TelemetryChartCard(CardWidget):
         self.tipLabel = CaptionLabel("左键拖动平移时间轴，滚轮缩放时基，双击回到实时位置。", self)
         self.chart = RealtimeChartWidget(self.chartModel, self)
         self.chart.set_title("F4CP Power Telemetry")
-        self.chart.setMinimumHeight(440)
+        self.chart.setMinimumHeight(300)
+        self.chart.setMaximumHeight(300)
+        self.setMaximumHeight(382)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(10)
+        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setSpacing(8)
         layout.addWidget(self.titleLabel)
         layout.addWidget(self.tipLabel)
         layout.addWidget(self.chart, 1)
@@ -518,50 +512,51 @@ class PowerPage(ScrollArea):
         self.refreshSerialPorts()
 
     def _initHeader(self) -> None:
-        self.headerCard = CardWidget(self.scrollWidget)
-        self.headerCard.setObjectName("powerHeaderCard")
-        layout = QHBoxLayout(self.headerCard)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(10)
-        titleBox = QVBoxLayout()
-        titleBox.setContentsMargins(0, 0, 0, 0)
-        titleBox.setSpacing(2)
-        self.titleLabel = TitleLabel("电源面板", self.headerCard)
-        self.subtitleLabel = CaptionLabel("UF4 Digital Power 运行监控 / 参数设置 / 实时曲线", self.headerCard)
-        titleBox.addWidget(self.titleLabel)
-        titleBox.addWidget(self.subtitleLabel)
+        self.header = PageHeader(
+            "电源面板",
+            "UF4 Digital Power 运行监控 / 输出设定 / 实时曲线",
+            self.scrollWidget,
+        )
+        self.titleLabel = self.header.titleLabel
+        self.subtitleLabel = self.header.subtitleLabel
 
-        self.portCombo = ComboBox(self.headerCard)
+        self.portCombo = ComboBox(self.header)
         self.portCombo.setMinimumWidth(140)
-        self.refreshTargetButton = PushButton(FIF.SYNC, "刷新串口", self.headerCard)
-        self.connectButton = PrimaryPushButton(FIF.LINK, "连接", self.headerCard)
-        self.stateBadge = StatusChip("离线", self.headerCard)
-        self.autoPollSwitch = SwitchButton(self.headerCard)
+        self.refreshTargetButton = PushButton(FIF.SYNC, "刷新串口", self.header)
+        self.connectButton = PrimaryPushButton(FIF.LINK, "连接", self.header)
+        self.stateBadge = StatusChip("离线", self.header)
+        self.autoPollSwitch = SwitchButton(self.header)
         self.autoPollSwitch.setOnText("自动轮询")
         self.autoPollSwitch.setOffText("自动轮询")
         self.autoPollSwitch.setChecked(True)
-        self.refreshButton = PushButton(FIF.SYNC, "立即刷新", self.headerCard)
-        self.debugButton = PushButton(FIF.SEARCH, "调试快照", self.headerCard)
-        # self.mockButton = PushButton(FIF.PLAY, "假数据", self.headerCard)
+        self.refreshButton = PushButton(FIF.SYNC, "立即刷新", self.header)
+        self.debugButton = PushButton(FIF.SEARCH, "调试快照", self.header)
+        # self.mockButton = PushButton(FIF.PLAY, "假数据", self.header)
         # self.mockButton.setCheckable(True)
 
-        layout.addLayout(titleBox, 1)
-        layout.addWidget(BodyLabel("串口", self.headerCard))
-        layout.addWidget(self.portCombo)
-        layout.addWidget(self.refreshTargetButton)
-        layout.addWidget(self.connectButton)
-        layout.addWidget(self.stateBadge)
-        layout.addSpacing(8)
-        layout.addWidget(self.autoPollSwitch)
-        layout.addWidget(self.refreshButton)
-        layout.addWidget(self.debugButton)
-        # layout.addWidget(self.mockButton)
-        self.rootLayout.addWidget(self.headerCard)
+        self.header.addAction(BodyLabel("串口", self.header))
+        self.header.addActions((
+            self.portCombo,
+            self.refreshTargetButton,
+            self.connectButton,
+            self.stateBadge,
+            self.autoPollSwitch,
+            self.refreshButton,
+            self.debugButton,
+        ))
+        # self.header.addAction(self.mockButton)
+        self.rootLayout.addWidget(self.header)
 
     def _initMetricCards(self) -> None:
+        self.overviewRow = QHBoxLayout()
+        self.overviewRow.setContentsMargins(0, 0, 0, 0)
+        self.overviewRow.setSpacing(12)
+
+        self.metricsHost = QWidget(self.scrollWidget)
         self.metricsGrid = QGridLayout()
+        self.metricsGrid.setContentsMargins(0, 0, 0, 0)
         self.metricsGrid.setHorizontalSpacing(12)
-        self.metricsGrid.setVerticalSpacing(6)
+        self.metricsGrid.setVerticalSpacing(8)
         self.metricCards = {
             "vin": MetricCard("输入电压", "#2F80ED", self.scrollWidget),
             "iin": MetricCard("输入电流", "#F2994A", self.scrollWidget),
@@ -572,25 +567,35 @@ class PowerPage(ScrollArea):
         }
         for index, key in enumerate(("vin", "iin", "pin", "vout", "iout", "pout")):
             self.metricsGrid.addWidget(self.metricCards[key], index // 3, index % 3)
-        self.rootLayout.addLayout(self.metricsGrid)
+        for column in range(3):
+            self.metricsGrid.setColumnStretch(column, 1)
+        self.metricsHost.setLayout(self.metricsGrid)
+
+        self.parameterEditor = ParameterEditor("输出设定", self.scrollWidget)
+        self.parameterEditor.setMinimumWidth(300)
+        self.parameterEditor.setMaximumWidth(340)
+        self.parameterEditor.setMinimumHeight(224)
+        self.parameterEditor.setMaximumHeight(224)
+
+        self.overviewRow.addWidget(self.metricsHost, 1, Qt.AlignmentFlag.AlignTop)
+        self.overviewRow.addWidget(self.parameterEditor, 0, Qt.AlignmentFlag.AlignTop)
+        self.rootLayout.addLayout(self.overviewRow)
 
     def _initTelemetryChart(self) -> None:
         self.chartCard = TelemetryChartCard(self.scrollWidget)
         self.rootLayout.addWidget(self.chartCard)
 
     def _initStatusAndParameters(self) -> None:
-        row = QHBoxLayout()
-        row.setSpacing(6)
         self.statusCard = CardWidget(self.scrollWidget)
         self.statusCard.setObjectName("PowerStatusCard")
         statusLayout = QVBoxLayout(self.statusCard)
-        statusLayout.setContentsMargins(12, 12, 12, 12)
-        statusLayout.setSpacing(6)
+        statusLayout.setContentsMargins(14, 12, 14, 14)
+        statusLayout.setSpacing(8)
         self.statusTitle = SubtitleLabel("状态", self.statusCard)
         self.statusGrid = QGridLayout()
         self.statusGrid.setContentsMargins(0, 0, 0, 0)
-        self.statusGrid.setHorizontalSpacing(10)
-        self.statusGrid.setVerticalSpacing(10)
+        self.statusGrid.setHorizontalSpacing(8)
+        self.statusGrid.setVerticalSpacing(8)
         self.statusFields = {
             "output": StatusValueWidget("输出", self.statusCard),
             "topology": StatusValueWidget("拓扑", self.statusCard),
@@ -607,15 +612,12 @@ class PowerPage(ScrollArea):
             "state", "fault", "core_temp",
             "board_temp", "pwm", "fan",
         )):
-            self.statusGrid.addWidget(self.statusFields[key], index // 3, index % 3)
-        for column in range(3):
+            self.statusGrid.addWidget(self.statusFields[key], index // 6, index % 6)
+        for column in range(6):
             self.statusGrid.setColumnStretch(column, 1)
         statusLayout.addWidget(self.statusTitle)
-        statusLayout.addLayout(self.statusGrid, 1)
-        self.parameterEditor = ParameterEditor("输出设定与保护阈值", self.scrollWidget)
-        row.addWidget(self.statusCard, 3)
-        row.addWidget(self.parameterEditor, 2)
-        self.rootLayout.addLayout(row)
+        statusLayout.addLayout(self.statusGrid)
+        self.rootLayout.addWidget(self.statusCard)
 
     def _initLogCard(self) -> None:
         self.logCard = CardWidget(self.scrollWidget)

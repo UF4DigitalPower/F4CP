@@ -73,6 +73,7 @@ from app.manager import (
     firmware_history_manager,
     update_manager,
 )
+from app.widgets.components import PageHeader
 from app.widgets.icon import UF4Icon
 from config import CTX, REPO_URL, VERSION
 
@@ -221,27 +222,17 @@ class VersionPage(ScrollArea):
         self._loadCachedFirmwareHistory()
 
     def _initHeader(self) -> None:
-        header = QWidget(self.scrollWidget)  # NOQA
-        layout = QHBoxLayout(header)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(12)
-
-        titleBox = QWidget(header)
-        titleLayout = QVBoxLayout(titleBox)
-        titleLayout.setContentsMargins(0, 0, 0, 0)
-        titleLayout.setSpacing(2)
-        self.titleLabel = TitleLabel("版本与固件", titleBox)
-        self.subtitleLabel = BodyLabel("查看软件提交历史，管理远程固件版本，并打开固件提交详情。", titleBox)
-        titleLayout.addWidget(self.titleLabel)
-        titleLayout.addWidget(self.subtitleLabel)
-
-        self.openUpdateSiteButton = PushButton(FIF.LINK, "更新站点", header)
-        self.openRepoButton = PushButton(UF4Icon.BOARD, "项目仓库", header)
-
-        layout.addWidget(titleBox, 1)
-        layout.addWidget(self.openUpdateSiteButton, 0, Qt.AlignmentFlag.AlignTop)
-        layout.addWidget(self.openRepoButton, 0, Qt.AlignmentFlag.AlignTop)
-        self.mainLayout.addWidget(header)
+        self.header = PageHeader(
+            "版本与固件",
+            "查看软件提交历史，管理远程固件版本，并打开固件提交详情。",
+            self.scrollWidget,
+        )
+        self.titleLabel = self.header.titleLabel
+        self.subtitleLabel = self.header.subtitleLabel
+        self.openUpdateSiteButton = PushButton(FIF.LINK, "更新站点", self.header)
+        self.openRepoButton = PushButton(UF4Icon.BOARD, "项目仓库", self.header)
+        self.header.addActions((self.openUpdateSiteButton, self.openRepoButton))
+        self.mainLayout.addWidget(self.header)
 
     def _initSummary(self) -> None:
         summary = QWidget(self.scrollWidget)
