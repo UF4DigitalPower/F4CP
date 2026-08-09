@@ -1,0 +1,20 @@
+{
+  "name": "Wrench Screwdriver",
+  "size": [
+    20,
+    24,
+    32
+  ],
+  "style": [
+    "Regular",
+    "Filled",
+    "Light"
+  ],
+  "keyword": "fluent-icon",
+  "description": "Used to represent general maintenance & tooling scenarios.",
+  "metaphor": [
+    "tool",
+    "maintenance",
+    "update"
+  ]
+}

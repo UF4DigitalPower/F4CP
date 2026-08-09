@@ -1,0 +1,40 @@
+{
+  "name": "Text Clear Formatting",
+  "size": [
+    24,
+    20,
+    16,
+    32
+  ],
+  "style": [
+    "Regular",
+    "Filled",
+    "Light"
+  ],
+  "keyword": "fluent-icon, word, excel, powerpoint, teams",
+  "description": "Used in clearing text formatting scenarios.",
+  "metaphor": [
+    "type",
+    "text",
+    "typography",
+    "edit",
+    "create",
+    "eraser",
+    "clear",
+    "letter"
+  ],
+  "language": [
+    {
+      "character": "Ab",
+      "locale": [
+        "en"
+      ]
+    },
+    {
+      "character": "Ga",
+      "locale": [
+        "ko"
+      ]
+    }
+  ]
+}

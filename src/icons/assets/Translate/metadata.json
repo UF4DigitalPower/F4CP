@@ -1,0 +1,8 @@
+{
+  "name": "Translate",
+  "size": [16, 20, 24, 28, 32, 48],
+  "style": ["Regular", "Filled", "Light"],
+  "keyword": "fluent-icon",
+  "description": "Used in general translation scenarios.",
+  "metaphor": ["text", "type", "letter"]
+}

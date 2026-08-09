@@ -1,0 +1,21 @@
+{
+  "name": "Tablet Laptop",
+  "size": [
+    20,
+    24
+  ],
+  "style": [
+    "Regular",
+    "Filled"
+  ],
+  "keyword": "fluent-icon",
+  "description": "Used to represent tablet and laptop scenarios.",
+  "metaphor": [
+    "monitor",
+    "remote work",
+    "small screen",
+    "touch screen",
+    "connect",
+    "device"
+  ]
+}

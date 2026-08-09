@@ -1,0 +1,7 @@
+common:
+    macros:
+        - USB_MANUF_STR="UF4OVER"
+        - USB_PROD_STR="UF4PowerFirmwareDAPLINK Bootloader"
+    sources:
+        board:
+            - source/board/custom_stm32f103xb_bl.c

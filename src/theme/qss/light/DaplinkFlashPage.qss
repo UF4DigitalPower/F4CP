@@ -1,0 +1,5 @@
+QScrollArea#DaplinkFlashPage,
+QWidget#daplinkScrollWidget {
+    background-color: transparent;
+    border: none;
+}

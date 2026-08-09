@@ -1,0 +1,20 @@
+{
+  "name": "Live",
+  "size": [
+    24,
+    20,
+    16
+  ],
+  "style": [
+    "Regular",
+    "Filled"
+  ],
+  "keyword": "fluent-icon, stream",
+  "description": "Used to represent live content.",
+  "metaphor": [
+    "stream",
+    "view",
+    "video",
+    "audio"
+  ]
+}

@@ -1,0 +1,23 @@
+[project]
+name = "daplinkfirmware"
+version = "0.1.0"
+description = "DAPLINKfirmware for UF4Power"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "bs4>=0.0.2",
+    "enum34>=1.1.10",
+    "fuzzywuzzy>=0.18.0",
+    "intelhex>=2.3.0",
+    "jsonschema>=4.26.0",
+    "mbed-cli==1.10.*",
+    "mbed-ls==1.8.*",
+    "numpy>=2.4.4",
+    "project-generator==0.11.*",
+    "pyelftools>=0.32",
+    "pyocd==0.32.*",
+    "pyserial>=3.5",
+    "pyusb>=1.3.1",
+    "pyyaml>=6.0,<7.0",
+    "requests>=2.33.1",
+]

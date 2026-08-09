@@ -1,0 +1,21 @@
+{
+  "name": "Tab Add",
+  "size": [
+    24,
+    20,
+    32
+  ],
+  "style": [
+    "Regular",
+    "Filled",
+    "Light"
+  ],
+  "keyword": "fluent-icon, edge",
+  "description": "Used in browser tab scenarios. Contains option variants.",
+  "metaphor": [
+    "tab",
+    "mobile",
+    "rectangle",
+    "browser"
+  ]
+}

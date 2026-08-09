@@ -1,0 +1,10 @@
+QScrollArea#BatteryPage {
+    background: transparent;
+    border: none;
+}
+
+QWidget#batteryScrollWidget {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+}

@@ -1,0 +1,242 @@
+[
+  {
+    "author": "UF4",
+    "date": "2026-06-19",
+    "short_hash": "397577a",
+    "subject": "docs(readme): 更新项目文档结构并添加功率板说明"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-18",
+    "short_hash": "96ab49f",
+    "subject": "fix(session): 解决会话功率模块中的错误帧处理问题"
+  },
+  {
+    "author": "Yu℃",
+    "date": "2026-06-17",
+    "short_hash": "7c55c3b",
+    "subject": "Update README.md"
+  },
+  {
+    "author": "Yu℃",
+    "date": "2026-06-16",
+    "short_hash": "169a0bc",
+    "subject": "合并拉取请求 #37"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-16",
+    "short_hash": "ffff16f",
+    "subject": "docs(readme): 更新项目文档并重新组织内容结构"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-16",
+    "short_hash": "1b5c810",
+    "subject": "add DAPLINK submodule"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-16",
+    "short_hash": "92298ec",
+    "subject": "add UF4COM submodule"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-16",
+    "short_hash": "063ffbc",
+    "subject": "add UF4COM submodule"
+  },
+  {
+    "author": "Yu℃",
+    "date": "2026-06-15",
+    "short_hash": "92197ff",
+    "subject": "合并拉取请求 #36"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-15",
+    "short_hash": "bbc2821",
+    "subject": "feat(protocol): 更新协议常量测试和版本配置"
+  },
+  {
+    "author": "Yu℃",
+    "date": "2026-06-15",
+    "short_hash": "0b80a88",
+    "subject": "合并拉取请求 #35"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-15",
+    "short_hash": "865af79",
+    "subject": "chore(workflow): 更新构建工作流注释"
+  },
+  {
+    "author": "Yu℃",
+    "date": "2026-06-15",
+    "short_hash": "55246e3",
+    "subject": "Merge pull request #34 from UF4OVER/F4CP_debug"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-15",
+    "short_hash": "29f1f8c",
+    "subject": "refactor(power): 优化电源数据类型定义和流式传输实现"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-14",
+    "short_hash": "8236d36",
+    "subject": "feat: 移除未使用的流处理函数，重构相关方法以简化代码"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-13",
+    "short_hash": "ca518d5",
+    "subject": "feat: 重构 TVLCOM 协议为 UF4COM，更新 CRC 和帧处理"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-13",
+    "short_hash": "58e142f",
+    "subject": "feat: 添加 TVLCOM 协议辅助工具，用于 CRC、帧编码/解码和原始流处理"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-13",
+    "short_hash": "d2e0dbb",
+    "subject": "feat: session_power模块中的重构流处理与错误管理"
+  },
+  {
+    "author": "Yu℃",
+    "date": "2026-06-10",
+    "short_hash": "6a16c78",
+    "subject": "项目版本 1.0.0"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-10",
+    "short_hash": "a2aaa9a",
+    "subject": "feat: 更新配置文件的版本范围，移除不必要的上下文管理函数"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-10",
+    "short_hash": "b4aa772",
+    "subject": "feat: 更新配置文件以清除版本范围，准备发布1.0.0正式版"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-10",
+    "short_hash": "5b337d9",
+    "subject": "feat: 更新版本到1.0.0正式版并清除配置中的会话凭证"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-10",
+    "short_hash": "7c73527",
+    "subject": "feat: 增强错误处理和用户提示，添加调试器连接状态检查"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-10",
+    "short_hash": "03657ae",
+    "subject": "feat: 添加 GitHub 登录与会话管理功能，增强更新请求的身份验证支持"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-10",
+    "short_hash": "ef54e9a",
+    "subject": "feat: 更新版本到0.6.1.dev1，调整旧版本范围并增强故障状态日志记录"
+  },
+  {
+    "author": "Yu℃",
+    "date": "2026-06-07",
+    "short_hash": "7eb8fed",
+    "subject": "Merge pull request #32 from UF4OVER/F4CP_debug"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-07",
+    "short_hash": "2310911",
+    "subject": "feat: 更新版本到0.6.0.rc1，调整配置文件以反映新版本"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-07",
+    "short_hash": "501e9f7",
+    "subject": "feat: 添加 TVLCOM 主机助手和共享帧/TLV 辅助功能"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-07",
+    "short_hash": "3c1916e",
+    "subject": "feat: 添加输入缓冲区清除功能，重构写入操作和状态同步逻辑"
+  },
+  {
+    "author": "Yu℃",
+    "date": "2026-06-07",
+    "short_hash": "083d49e",
+    "subject": "Merge pull request #31 from UF4OVER/F4CP_debug"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-07",
+    "short_hash": "e378cb1",
+    "subject": "feat: 更新版本到0.5.5.rc1，调整构建配置和外观设置"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-07",
+    "short_hash": "07bf76b",
+    "subject": "feat: 更新文档和代码以增强模块化设计，添加 Git 提交缓存功能"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-07",
+    "short_hash": "c0678c2",
+    "subject": "refactor: 通过删除未使用的函数和改进方法名称来清理代码"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-07",
+    "short_hash": "a105d04",
+    "subject": "feat: 更新外观配置并移除未使用的认证逻辑"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-06",
+    "short_hash": "463930e",
+    "subject": "feat: 重构日志设置并提升跨模块的日志使用率"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-06",
+    "short_hash": "bcc6857",
+    "subject": "feat: 版本提升到0.5.5.dev2并更新相关配置"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-06",
+    "short_hash": "c97aa7f",
+    "subject": "feat: 实现签名请求构建器以支持更新请求并添加认证目录"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-06",
+    "short_hash": "2560e5c",
+    "subject": "feat: add version management page with firmware history and details"
+  },
+  {
+    "author": "UF4",
+    "date": "2026-06-06",
+    "short_hash": "957822a",
+    "subject": "feat: update build configuration for F4CP_debug branch and bump version to 0.5.5.dev1"
+  },
+  {
+    "author": "Yu℃",
+    "date": "2026-06-03",
+    "short_hash": "99ca6dd",
+    "subject": "Merge pull request #30 from UF4OVER/F4CP_debug"
+  }
+]

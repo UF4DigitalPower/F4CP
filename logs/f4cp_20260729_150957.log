@@ -1,0 +1,26 @@
+[2026-07-29 15:09:59] [MainThread/INFO] [F4CP.Bootstrap]: main is running
+[2026-07-29 15:09:59] [MainThread/INFO] [F4CP.Bootstrap]: highDpiScaling is running
+[2026-07-29 15:09:59] [MainThread/INFO] [F4CP.Bootstrap]: Application started
+[2026-07-29 15:09:59] [MainThread/INFO] [F4CP.FontManager]: Application font family applied: ['Segoe UI', 'Microsoft YaHei', 'PingFang SC']
+[2026-07-29 15:10:00] [MainThread/INFO] [F4CP.DevicePage]: 串口列表: ['COM11', 'COM5', 'COM10', 'COM6', 'COM9', 'COM8']
+[2026-07-29 15:10:00] [MainThread/INFO] [F4CP.RealtimeChart]: Using PyQtGraph for realtime chart rendering.
+[2026-07-29 15:10:00] [MainThread/INFO] [F4CP.PowerPage]: Serial ports: ['COM11', 'COM5', 'COM10', 'COM6', 'COM9', 'COM8']
+[2026-07-29 15:10:01] [Dummy-1/WARNING] [F4CP.VersionPage]: Failed to fetch git commits online: <urlopen error [Errno 11001] getaddrinfo failed>
+[2026-07-29 15:10:01] [Dummy-4/INFO] [F4CP.UpdateManager]: UpdateManager fetching remote firmware version info from https://github.com/UF4OVER/UF4DigitalPower/releases
+[2026-07-29 15:10:01] [Dummy-4/WARNING] [F4CP.UpdateManager]: UpdateManager failed to fetch update data: <urlopen error [Errno 11001] getaddrinfo failed>
+[2026-07-29 15:10:12] [MainThread/INFO] [F4CP.PowerPage]: 已连接: COM11
+[2026-07-29 15:10:12] [MainThread/INFO] [F4CP.PowerPage]: Device session attached on COM11
+[2026-07-29 15:10:12] [MainThread/INFO] [F4CP.PowerPage]: Attached to serial session on COM11
+[2026-07-29 15:10:12] [MainThread/INFO] [F4CP.SerialSession]: 写入数据: aa550101015a0a00000b00000c00000d00000e00000f00001000001100001200001400001500001600001700001800001a00001c00001d00001e00001f00002000002100002200002300002400002500002600002700002900002a00002b0000ceea
+[2026-07-29 15:10:12] [MainThread/INFO] [F4CP.PowerPage]: REQ cmd=0x01 seq=1 len=90
+[2026-07-29 15:10:12] [MainThread/INFO] [F4CP.PowerPage]: 状态 输出=关闭 状态机=WAIT 拓扑=BUCK 故障=无 VOUT=2.172V IOUT=0.000A
+[2026-07-29 15:10:12] [MainThread/INFO] [F4CP.SerialSession]: 写入数据: aa5502011000eb5d
+[2026-07-29 15:10:12] [MainThread/INFO] [F4CP.PowerPage]: REQ cmd=0x10 seq=2 len=0
+[2026-07-29 15:10:12] [MainThread/INFO] [F4CP.PowerPage]: UF4COM stream started (period=20 ms, all IDs)
+[2026-07-29 15:11:43] [MainThread/INFO] [F4CP.PowerPage]: 通信失败 1/3: 由于线程退出或应用程序请求，已中止 I/O 操作。
+[2026-07-29 15:11:43] [MainThread/INFO] [F4CP.PowerPage]: 错误: 由于线程退出或应用程序请求，已中止 I/O 操作。
+[2026-07-29 15:11:43] [MainThread/ERROR] [F4CP.PowerPage]: Power client error: 由于线程退出或应用程序请求，已中止 I/O 操作。
+[2026-07-29 15:11:43] [MainThread/INFO] [F4CP.PowerPage]: 错误: 由于线程退出或应用程序请求，已中止 I/O 操作。
+[2026-07-29 15:11:43] [MainThread/ERROR] [F4CP.PowerPage]: Power client error: 由于线程退出或应用程序请求，已中止 I/O 操作。
+[2026-07-29 15:11:47] [MainThread/WARNING] [F4CP.Bootstrap]: Application closed
+[2026-07-29 15:11:47] [MainThread/INFO] [F4CP.PowerPage]: UF4COM stream stopped

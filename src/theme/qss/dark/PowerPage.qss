@@ -1,0 +1,10 @@
+QScrollArea#PowerPage {
+    background: transparent;
+    border: none;
+}
+
+QWidget#powerScrollWidget {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+}

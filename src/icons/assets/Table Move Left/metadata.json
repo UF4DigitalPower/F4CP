@@ -1,0 +1,24 @@
+{
+  "name": "Table Move Left",
+  "size": [
+    24,
+    28,
+    16,
+    20,
+    32
+  ],
+  "style": [
+    "Regular",
+    "Filled",
+    "Light"
+  ],
+  "keyword": "fluent-icon, excel",
+  "description": "Used in moving column and row scenarios. Contains directional variants.",
+  "metaphor": [
+    "cell",
+    "row",
+    "column",
+    "information",
+    "chart"
+  ]
+}

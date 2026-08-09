@@ -1,0 +1,5 @@
+QScrollArea#DevicePage,
+QWidget#deviceScrollWidget {
+    background-color: transparent;
+    border: none;
+}

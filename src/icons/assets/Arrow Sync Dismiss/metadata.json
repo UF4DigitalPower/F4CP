@@ -1,0 +1,21 @@
+{
+  "name": "Arrow Sync Dismiss",
+  "size": [
+    16,
+    20,
+    24
+  ],
+  "style": [
+    "Filled",
+    "Regular"
+  ],
+  "keyword": "fluent-icon",
+  "description": "Used for synchronizing & loading scenarios.",
+  "metaphor": [
+    "arrow",
+    "direction",
+    "synchronize",
+    "dismiss"
+  ],
+  "directionType": "mirror"
+}
