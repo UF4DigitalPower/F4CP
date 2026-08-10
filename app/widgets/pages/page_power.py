@@ -21,7 +21,7 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QGridLayout, QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import (
     BodyLabel, CardWidget, CaptionLabel, ComboBox, DoubleSpinBox,
-    FluentIcon as FIF, PillPushButton, PrimaryPushButton, PushButton,
+    FluentIcon as FIF, PrimaryPushButton, PushButton,
     ScrollArea, SpinBox,
     StrongBodyLabel, SubtitleLabel, SwitchButton, TextEdit, TitleLabel,
     isDarkTheme, setFont,
@@ -39,6 +39,7 @@ from app.session import (
     build_status,
 )
 from app.widgets.components import PageHeader
+from app.widgets.components.chip import ChipTone, StatusChip as BaseStatusChip
 from app.widgets.chart.chart_model import ChartModel
 from app.widgets.chart.realtime_chart_widget import RealtimeChartWidget
 from config import CTX, get_logger
@@ -61,8 +62,8 @@ POWER_CHART_CHANNELS = (
     ChannelConfig("pin", "输入功率", "W", precision=3, group="power", color=(86, 204, 242), line_width=2.0),
     ChannelConfig("pout", "输出功率", "W", precision=3, group="power", color=(155, 81, 224), line_width=2.0),
     ChannelConfig("efficiency", "效率", "%", precision=2, group="efficiency", color=(255, 193, 7), line_width=2.0),
-    ChannelConfig("core_temp", "核心温度", "°C", precision=2, group="thermal", color=(255, 112, 67), line_width=2.0),
-    ChannelConfig("board_temp", "板载温度", "°C", precision=2, group="thermal", color=(255, 152, 0), line_width=2.0),
+    ChannelConfig("core_temp", "通道温度1", "°C", precision=2, group="thermal", color=(255, 112, 67), line_width=2.0),
+    ChannelConfig("board_temp", "通道温度2", "°C", precision=2, group="thermal", color=(255, 152, 0), line_width=2.0),
 )
 
 
@@ -127,37 +128,17 @@ class MetricCard(CardWidget):
         self.valueLabel.setStyleSheet(f"color: {text};")
 
 
-class StatusChip(PillPushButton):
+class StatusChip(BaseStatusChip):
+    """电源在线状态标签：在线=成功绿，离线=危险红，与 RO/RW 标签同一胶囊风格。"""
+
     def __init__(self, text: str = "离线", parent=None):
-        super().__init__(text, parent)
-        self.setCheckable(False)
-        self.setFixedHeight(30)
-        self.setMinimumWidth(86)
-        self.setProperty("onlineState", "offline")
-        self.refreshTheme()
+        super().__init__(text, ChipTone.DANGER, parent)
+        self._online = False
 
     def setOnline(self, online: bool) -> None:
-        self.setText("在线" if online else "离线")
-        self.setProperty("onlineState", "online" if online else "offline")
-        self.refreshTheme()
-
-    def refreshTheme(self) -> None:
-        online = self.property("onlineState") == "online"
-        if online:
-            background = "rgba(34, 197, 94, 0.22)"
-            foreground = "#22C55E" if isDarkTheme() else "#166534"
-            border = "rgba(34, 197, 94, 0.36)"
-        else:
-            background = "rgba(239, 68, 68, 0.20)"
-            foreground = "#F87171" if isDarkTheme() else "#B91C1C"
-            border = "rgba(239, 68, 68, 0.34)"
-        self.setStyleSheet(f"""
-            PillPushButton {{
-                background: {background}; color: {foreground};
-                border: 1px solid {border}; border-radius: 14px;
-                padding: 0 12px; font-weight: 700;
-            }}
-        """)
+        self._online = bool(online)
+        self.setText("在线" if self._online else "离线")
+        super().setOnline(self._online)
 
 
 class StatusValueWidget(QWidget):
@@ -509,6 +490,7 @@ class PowerPage(ScrollArea):
         self._bindSignals()
         self._applyDisconnectedState()
         StyleSheet.POWER_PAGE.apply(self)
+        CTX.cfg.themeChanged.connect(self._onThemeChanged)
         self.refreshSerialPorts()
 
     def _initHeader(self) -> None:
@@ -602,8 +584,8 @@ class PowerPage(ScrollArea):
             "mode": StatusValueWidget("控制模式", self.statusCard),
             "state": StatusValueWidget("状态机", self.statusCard),
             "fault": StatusValueWidget("故障", self.statusCard),
-            "core_temp": StatusValueWidget("核心温度", self.statusCard),
-            "board_temp": StatusValueWidget("板载温度", self.statusCard),
+            "core_temp": StatusValueWidget("通道温度1", self.statusCard),
+            "board_temp": StatusValueWidget("通道温度2", self.statusCard),
             "pwm": StatusValueWidget("PWM A/D", self.statusCard),
             "fan": StatusValueWidget("风扇", self.statusCard),
         }

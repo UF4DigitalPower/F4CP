@@ -60,7 +60,7 @@ from qfluentwidgets import (
 
 from app.ctrl import DevicePageController
 from app.manager import StyleSheet
-from app.widgets.components import PageHeader
+from app.widgets.components import ChipTone, PageHeader, StatusChip
 from app.session import (
     ErrorEvent,
     PowerBluetoothSession,
@@ -80,7 +80,7 @@ from app.protocol.tvlcom import (
     encode_tlv,
     iter_tlv_items,
 )
-from config import get_logger
+from config import CTX, get_logger
 
 logger = get_logger("DevicePage")
 
@@ -137,44 +137,17 @@ class PageCard(CardWidget):
         self.vBoxLayout.addLayout(layout, stretch)
 
 
-class QLabelCompat(BodyLabel):
-    pass
+class StatusPill(StatusChip):
+    """串口连接状态标签：已连接=成功绿，未连接=危险红，与 RO/RW 标签同一胶囊风格。"""
 
-
-class StatusPill(CardWidget):
     def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setObjectName("SerialStatusPill")
-        self.setFixedHeight(32)
-        self.setMinimumWidth(104)
-
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(12, 0, 12, 0)
-        layout.setSpacing(8)
-        self.dot = QLabelCompat("●", self)
-        self.label = StrongBodyLabel("未连接", self)
-        layout.addWidget(self.dot)
-        layout.addWidget(self.label)
-        self.setOnline(False)
+        super().__init__("未连接", ChipTone.DANGER, parent)
+        self._online = False
 
     def setOnline(self, online: bool) -> None:
-        dark = isDarkTheme()
-        if online:
-            bg = "rgba(34, 197, 94, 0.18)"
-            fg = "#22C55E" if dark else "#15803D"
-            border = "rgba(34, 197, 94, 0.34)"
-            text = "已连接"
-        else:
-            bg = "rgba(148, 163, 184, 0.18)"
-            fg = "#CBD5E1" if dark else "#475569"
-            border = "rgba(148, 163, 184, 0.30)"
-            text = "未连接"
-        self.label.setText(text)
-        self.dot.setStyleSheet(f"color: {fg}; font-size: 13px;")
-        self.label.setStyleSheet(f"color: {fg}; font-weight: 700;")
-        self.setStyleSheet(
-            f"QFrame#SerialStatusPill {{ background: {bg}; border: 1px solid {border}; border-radius: 16px; }}"
-        )
+        self._online = bool(online)
+        self.setText("已连接" if self._online else "未连接")
+        super().setOnline(self._online)
 
 
 class DevicePage(ScrollArea):

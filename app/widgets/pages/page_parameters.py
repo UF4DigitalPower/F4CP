@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import QAbstractSpinBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QAbstractSpinBox, QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import (
     BodyLabel,
     CaptionLabel,
@@ -19,23 +19,15 @@ from qfluentwidgets import (
     setFont,
 )
 from app.core.parameter_manager import PARAMETER_SPECS, ParameterManager, ParameterSpec
-from app.widgets.components import PageHeader
+from app.widgets.components import ChipTone, PageHeader, StatusChip
 
 
-class AccessChip(QLabel):
+class AccessChip(StatusChip):
+    """RO/RW 权限标签：RO=中性灰，RW=成功绿，与连接状态标签同一胶囊风格。"""
+
     def __init__(self, access: str, parent=None):
-        super().__init__(access, parent)
-        self.setAlignment(Qt.AlignCenter)
-        self.setFixedSize(42, 24)
-        setFont(self, 11, QFont.DemiBold)
-        self.setStyleSheet("""
-            QLabel {
-                color: #555555;
-                background: rgba(128, 128, 128, 0.10);
-                border: 1px solid rgba(128, 128, 128, 0.24);
-                border-radius: 12px;
-            }
-        """)
+        tone = ChipTone.SUCCESS if access == "RW" else ChipTone.NEUTRAL
+        super().__init__(access, tone, parent)
 
 
 class ParameterRow(QWidget):

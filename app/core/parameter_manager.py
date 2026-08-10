@@ -67,7 +67,7 @@ PARAMETER_SPECS = (
     ParameterSpec("实时遥测", "输入电流", "0x0B", "RO", 0, "mA", 0, 65535, "UF4_ID_INPUT_CURRENT"),
     ParameterSpec("实时遥测", "输出电压", "0x0C", "RO", 0, "mV", 0, 65535, "UF4_ID_OUTPUT_VOLTAGE"),
     ParameterSpec("实时遥测", "输出电流", "0x0D", "RO", 0, "mA", 0, 65535, "UF4_ID_OUTPUT_CURRENT"),
-    ParameterSpec("实时遥测", "核心温度", "0x0E", "RO", 0, "deg C", 0, 65535, "UF4_ID_CORE_TEMPERATURE"),
+    ParameterSpec("实时遥测", "通道温度1", "0x0E", "RO", 0, "deg C", 0, 65535, "UF4_ID_CORE_TEMPERATURE"),
     ParameterSpec("实时遥测", "温度 1", "0x0F", "RO", 0, "deg C", 0, 65535, "UF4_ID_TEMP1_TEMPERATURE"),
     ParameterSpec("实时遥测", "温度 2", "0x10", "RO", 0, "deg C", 0, 65535, "UF4_ID_TEMP2_TEMPERATURE"),
     ParameterSpec("状态只读", "CC/CV 模式", "0x14", "RO", 0, "enum", 0, 65535, "UF4_ID_CC_CV_MODE"),

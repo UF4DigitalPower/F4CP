@@ -26,8 +26,8 @@ from app.window import Window
 class Application(Window):
     def __init__(self):
         super().__init__()
-        self.setFixedSize(1500,1200)
-
+        self.resize(1500, 1000)
+        self.setMinimumSize(1200, 900)
     def close(self):
         logger.warning("Application closed")
         super().close()

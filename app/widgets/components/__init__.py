@@ -11,6 +11,7 @@
 #  @Python  : 3.10
 # -------------------------------
 
+from .chip import ChipTone, StatusChip
 from .dynamicisland import DynamicIsland
 from .page_header import PageHeader
 from .splashscreen import F4SplashScreen, createSplashScreen

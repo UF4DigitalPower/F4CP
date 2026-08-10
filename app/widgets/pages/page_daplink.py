@@ -17,7 +17,7 @@ import os
 from pathlib import Path
 
 from PyQt5.QtCore import QCoreApplication
-from PyQt5.QtGui import QTextCursor
+from PyQt5.QtGui import QFont, QTextCursor
 from PyQt5.QtWidgets import QFileDialog, QGridLayout, QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import (
     BodyLabel,
@@ -33,6 +33,7 @@ from qfluentwidgets import (
     SwitchButton,
     TextEdit,
     TitleLabel,
+    setFont,
 )
 
 from app.ctrl import DaplinkPageController
@@ -237,7 +238,7 @@ class DaplinkPage(ScrollArea):
             titleLabel = BodyLabel(self.infoCard)
             grid.addWidget(titleLabel, row, column)
             valueLabel = BodyLabel("--", self.infoCard)
-            valueLabel.setStyleSheet("font-weight: bold;")
+            setFont(valueLabel, 14, QFont.Bold)
             valueLabel.setWordWrap(True)
             grid.addWidget(valueLabel, row, column + 1)
             self.infoTitleLabels[key] = titleLabel
