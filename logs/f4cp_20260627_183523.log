@@ -1,9 +1,0 @@
-[2026-06-27 18:35:24] [MainThread/INFO] [F4CP.Bootstrap]: main is running
-[2026-06-27 18:35:24] [MainThread/INFO] [F4CP.Bootstrap]: highDpiScaling is running
-[2026-06-27 18:35:24] [MainThread/INFO] [F4CP.Bootstrap]: Application started
-[2026-06-27 18:35:24] [MainThread/INFO] [F4CP.FontManager]: Application font family applied: ['Segoe UI', 'Microsoft YaHei', 'PingFang SC']
-[2026-06-27 18:35:24] [MainThread/INFO] [F4CP.DevicePage]: 串口列表: ['COM5', 'COM6', 'COM8', 'COM9']
-[2026-06-27 18:35:24] [MainThread/INFO] [F4CP.RealtimeChart]: Using PyQtGraph for realtime chart rendering.
-[2026-06-27 18:35:25] [MainThread/INFO] [F4CP.PowerPage]: Serial ports: ['COM5', 'COM6', 'COM8', 'COM9']
-[2026-06-27 18:35:25] [MainThread/INFO] [F4CP.Bootstrap]: start time: 1.5128707885742188
-[2026-06-27 18:35:27] [MainThread/WARNING] [F4CP.Bootstrap]: Application closed

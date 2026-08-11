@@ -1,6 +1,0 @@
-common:
-    sources:
-        board:
-            - source/board/stm32f334r8.c
-        family:
-            - source/family/st/stm32f334r8/target.c

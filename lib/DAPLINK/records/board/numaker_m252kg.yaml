@@ -1,6 +1,0 @@
-common:
-    sources:
-        board:
-            - source/board/numaker_m252kg.c
-        family:
-            - source/family/nuvoton/m252kg6ae/target.c

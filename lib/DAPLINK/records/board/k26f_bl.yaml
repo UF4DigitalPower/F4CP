@@ -1,4 +1,0 @@
-common:
-    sources:
-        board:
-            - source/board/k26f_bl.c

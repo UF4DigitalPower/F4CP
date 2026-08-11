@@ -1,6 +1,0 @@
-common:
-    sources:
-        board:
-            - source/board/numaker_iot_m467.c
-        family:
-            - source/family/nuvoton/m467hjhae/target.c

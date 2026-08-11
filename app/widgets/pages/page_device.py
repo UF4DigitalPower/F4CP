@@ -197,6 +197,7 @@ class DevicePage(ScrollArea):
         self._applyTexts()
         self.refreshPorts()
         self._applyMode()
+        CTX.cfg.themeChanged.connect(self._onThemeChanged)
 
     def _initHeader(self):
         self.header = PageHeader(

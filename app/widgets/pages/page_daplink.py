@@ -92,6 +92,7 @@ class DaplinkPage(ScrollArea):
         self._controller = DaplinkPageController(self)
         self._controller.bind()
         self._controller.scheduleStartupTasks()
+        CTX.cfg.themeChanged.connect(self._onThemeChanged)
 
     def event(self, e):
         eventType = e.type()

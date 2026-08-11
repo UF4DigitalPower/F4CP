@@ -137,14 +137,6 @@ def pretty_faults(fault_state: int) -> str:
     return "无故障" if not fault_state else f"0x{fault_state:04X}"
 
 
-@dataclass(frozen=True)
-class DebugSnapshot:
-    output_voltage_raw: int = 0
-    output_voltage_mv: int = 0
-    ovp_set_value_mv: int | None = None
-    loop_current_reference_ma: int | None = None
-
-
 class F4CPPowerClient(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -153,9 +145,6 @@ class F4CPPowerClient(QObject):
 
     def pretty_print_status(self, status: PowerStatus) -> str:
         return "电源逻辑层已移除，当前为界面占位状态。"
-
-    def pretty_print_debug_snapshot(self, snapshot: DebugSnapshot) -> str:
-        return "调试快照逻辑已移除。"
 
     @pyqtSlot()
     def shutdown(self) -> None:

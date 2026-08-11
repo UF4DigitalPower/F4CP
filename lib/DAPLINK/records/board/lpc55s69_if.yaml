@@ -1,3 +1,0 @@
-common:
-    macros:
-        - USB_PROD_STR="LPC55xx DAPLink CMSIS-DAP"

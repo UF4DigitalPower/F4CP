@@ -406,6 +406,7 @@ class HomePage(ScrollArea):
         self.setWidgetResizable(True)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         StyleSheet.HOME_PAGE.apply(self)
+        CTX.cfg.themeChanged.connect(self._onThemeChanged)
 
     def _onThemeChanged(self, *_):
         StyleSheet.HOME_PAGE.apply(self)

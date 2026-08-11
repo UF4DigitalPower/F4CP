@@ -23,7 +23,7 @@ from qfluentwidgets import isDarkTheme
 from app.widgets.chart.chart_value_panel import ChartValuePanel
 from app.widgets.chart.chart_model import ChartModel
 from app.widgets.chart.chart_control_panel import ChartControlPanel
-from app.widgets.chart.pyqtgraph_chart_widget import PyQtGraphChartWidget
+from app.widgets.chart.gpu_chart_widget import PyQtGraphChartWidget
 from config import cfg, get_logger
 
 logger = get_logger("RealtimeChart")
@@ -33,7 +33,7 @@ class RealtimeChartWidget(QWidget):
     """
     实时图表外层控件。
 
-    统一使用 PyQtGraph 图表，并将采样输入与界面重绘解耦。
+    统一使用 GPU 图表，并将采样输入与界面重绘解耦。
     数据流可以高频写入，界面重绘限制在可控帧率内。
     """
 
@@ -49,6 +49,12 @@ class RealtimeChartWidget(QWidget):
         self._pending_title = "Power Device Realtime Chart"
         self._dirty = True
         self._live_updates_suspended = False
+
+        # 性能统计（set_perf_logging(True) 后每 ~2s 输出一次）
+        self._perf_logging = False
+        self._perf_frames = 0
+        self._perf_render_ms = 0.0
+        self._perf_t0 = time.monotonic()
 
         self.control_panel = ChartControlPanel(self)
         self.chart_widget = None
@@ -97,7 +103,7 @@ class RealtimeChartWidget(QWidget):
         self.initializeChart()
 
     def initializeChart(self) -> None:
-        """Create the PyQtGraph chart lazily."""
+        """Create the GPU chart lazily."""
         if self._chart_initialized:
             return
         self._chart_initialized = True
@@ -106,7 +112,7 @@ class RealtimeChartWidget(QWidget):
         self.chart_widget.set_title(self._pending_title)
         self.chart_widget.snapshotUpdated.connect(self._queue_value_panel_snapshot)
         self.chart_area_layout.insertWidget(0, self.chart_widget, 1)
-        logger.info("Using PyQtGraph for realtime chart rendering.")
+        logger.info("Using GPU chart renderer for realtime chart rendering.")
 
         self.refreshTheme()
         self.mark_data_dirty()
@@ -116,7 +122,11 @@ class RealtimeChartWidget(QWidget):
         if self._live_updates_suspended:
             return
         if self.isVisible() and self.chart_widget is not None and self._dirty:
+            start = time.perf_counter()
             self.update_chart()
+            self._perf_render_ms += (time.perf_counter() - start) * 1000.0
+            self._perf_frames += 1
+            self._maybe_log_perf()
 
     def request_repaint(self, data_changed: bool = False) -> None:
         if data_changed:
@@ -132,6 +142,35 @@ class RealtimeChartWidget(QWidget):
     def set_render_fps(self, fps: int) -> None:
         fps = max(1, int(fps))
         self._live_timer.setInterval(max(16, int(1000 / fps)))
+
+    def set_perf_logging(self, enabled: bool) -> None:
+        """开启后每隔约 2 秒输出一次渲染性能日志（帧率 / 模型+更新耗时 / 绘制耗时）。"""
+        self._perf_logging = bool(enabled)
+        self._perf_frames = 0
+        self._perf_render_ms = 0.0
+        self._perf_t0 = time.monotonic()
+
+    def _maybe_log_perf(self) -> None:
+        if not self._perf_logging:
+            return
+        now = time.monotonic()
+        elapsed = now - self._perf_t0
+        if elapsed < 2.0:
+            return
+        fps = self._perf_frames / elapsed
+        avg_render_ms = self._perf_render_ms / max(1, self._perf_frames)
+        paint_ms = "n/a"
+        if self.chart_widget is not None:
+            try:
+                paint_ms = f"{self.chart_widget.paint_stats():.2f} ms"
+            except Exception:
+                paint_ms = "n/a"
+        logger.info(
+            f"[perf] render {fps:.1f} fps | model+update {avg_render_ms:.2f} ms/frame | paint {paint_ms}"
+        )
+        self._perf_frames = 0
+        self._perf_render_ms = 0.0
+        self._perf_t0 = now
 
     def update_chart(self) -> None:
         if self.chart_widget is not None:

@@ -17,7 +17,7 @@ from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget
 
-from config import AUTHOR, FEEDBACK_URL, HELP_URL, VERSION, YEAR, cfg
+from config import AUTHOR, CTX, FEEDBACK_URL, HELP_URL, VERSION, YEAR, cfg
 from app.widgets.components import PageHeader
 from app.manager import (
     FontOption,
@@ -143,6 +143,7 @@ class SettingsPage(ScrollArea):
         self.__applyLocalStyle()
         StyleSheet.SETTINGS_PAGE.apply(self)
         self.__setCustomColorCardTexts('主题色', '调整应用的主色调')
+        CTX.cfg.themeChanged.connect(self._onThemeChanged)
 
     def __initLayout(self):
         self.appearanceGroup.addSettingCard(self.themeCard)

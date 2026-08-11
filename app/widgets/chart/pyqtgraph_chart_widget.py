@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import bisect
+import os
+import time
 
 import pyqtgraph as pg
 from PyQt5.QtCore import QPoint, Qt, pyqtSignal
@@ -22,6 +24,24 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from qfluentwidgets import isDarkTheme
 
 from app.widgets.chart.chart_model import ChartModel, ChartSnapshot
+from config import get_logger
+
+logger = get_logger("Chart")
+
+# OpenGL 渲染开关：默认关闭。注意 pyqtgraph 的 OpenGL 视口走原生 GL 绘制，
+# 坐标轴文字 / 图例 / 网格等元素颜色不随主题（观感缺陷）；只有在明确需要
+# 性能并接受主题不一致时，才设置环境变量 F4CP_OPENGL=1 启用。
+_USE_OPENGL = os.environ.get("F4CP_OPENGL", "0").strip().lower() not in ("0", "false", "no")
+if _USE_OPENGL:
+    try:
+        pg.setConfigOptions(useOpenGL=True, antialias=True)
+        logger.info("pyqtgraph OpenGL rendering enabled (set F4CP_OPENGL=0 to disable)")
+    except Exception as exc:
+        logger.warning(f"pyqtgraph OpenGL unavailable, fallback to CPU rendering: {exc}")
+        pg.setConfigOptions(useOpenGL=False, antialias=True)
+else:
+    pg.setConfigOptions(useOpenGL=False, antialias=True)
+    logger.info("pyqtgraph OpenGL rendering disabled by default (set F4CP_OPENGL=1 to enable)")
 
 
 class _InteractivePlotWidget(pg.PlotWidget):
@@ -65,6 +85,13 @@ class _InteractivePlotWidget(pg.PlotWidget):
         self._owner._setHoverVisible(False)
         super().leaveEvent(event)
 
+    def paintEvent(self, event) -> None:
+        start = time.perf_counter()
+        try:
+            super().paintEvent(event)
+        finally:
+            self._owner._record_paint_ms((time.perf_counter() - start) * 1000.0)
+
 
 class PyQtGraphChartWidget(QWidget):
     """PyQtGraph realtime chart with the same interaction contract as the old chart."""
@@ -82,6 +109,8 @@ class PyQtGraphChartWidget(QWidget):
         self._last_drag_x = 0
         self._curves: dict[str, pg.PlotDataItem] = {}
         self._hover_threshold_px = 12
+        self._paint_ms_total = 0.0
+        self._paint_count = 0
 
         self.plot = _InteractivePlotWidget(self, self)
         self.plot.setMouseTracking(True)
@@ -109,9 +138,23 @@ class PyQtGraphChartWidget(QWidget):
         self.refreshTheme()
         self._setHoverVisible(False)
 
+        viewport = self.plot.viewport()
+        gl_active = viewport is not None and type(viewport).__name__ == "GraphicsViewGLWidget"
+        logger.info(f"chart viewport: {'OpenGL' if gl_active else 'CPU/raster'} ({type(viewport).__name__})")
+
     def set_title(self, title: str) -> None:
         self.title = title or "Power Device Realtime Chart"
         self.plot.setTitle(self.title + "  (PyQtGraph)")
+
+    def _record_paint_ms(self, ms: float) -> None:
+        self._paint_ms_total += ms
+        self._paint_count += 1
+
+    def paint_stats(self) -> float:
+        """平均每帧绘制耗时（毫秒）；无绘制记录时返回 0.0。"""
+        if self._paint_count <= 0:
+            return 0.0
+        return self._paint_ms_total / self._paint_count
 
     def mark_data_dirty(self) -> None:
         self._snapshot_dirty = True

@@ -1,6 +1,0 @@
-common:
-    sources:
-        board:
-            - source/board/stm32f429zi.c
-        family:
-            - source/family/st/stm32f429zi/target.c

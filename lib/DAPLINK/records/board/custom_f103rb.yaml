@@ -1,9 +1,0 @@
-common:
-    macros:
-        - USB_MANUF_STR="UF4OVER"
-        - USB_PROD_STR="UF4PowerFirmwareDAPLINK CMSIS-DAP"
-    sources:
-        board:
-            - source/board/custom_f103rb.c
-        family:
-            - source/family/st/stm32f103rb/target.c

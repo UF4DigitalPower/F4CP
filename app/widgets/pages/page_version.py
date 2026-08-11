@@ -220,6 +220,7 @@ class VersionPage(ScrollArea):
         StyleSheet.VERSION_PAGE.apply(self)
         self._applyLocalStyle()
         self._loadCachedFirmwareHistory()
+        CTX.cfg.themeChanged.connect(self._onThemeChanged)
 
     def _initHeader(self) -> None:
         self.header = PageHeader(

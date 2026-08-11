@@ -34,7 +34,7 @@ from app.ctrl import PowerPageController
 from app.manager import StyleSheet
 
 from app.session import (
-    DEFAULT_STATUS_VALUES, DebugSnapshot, F4CPPowerClient, PowerStatus, SerialConfig,
+    DEFAULT_STATUS_VALUES, F4CPPowerClient, PowerStatus, SerialConfig,
     SerialSession, listSerialPorts, pretty_faults,
     build_status,
 )
@@ -52,7 +52,6 @@ POWER_POLL_INTERVAL_MS = 500
 POWER_SERIAL_BAUD_RATE = 921600
 WRITE_POLL_RESTART_DELAY_MS = 600
 WRITE_WATCHDOG_TIMEOUT_MS = 6500
-MOCK_SAMPLE_INTERVAL_MS = 20
 
 POWER_CHART_CHANNELS = (
     ChannelConfig("vin", "输入电压", "V", precision=3, group="voltage", color=(47, 128, 237), line_width=2.0),
@@ -425,7 +424,6 @@ class PowerPage(ScrollArea):
     attachSessionRequested = pyqtSignal(object)
     detachSessionRequested = pyqtSignal()
     readStatusRequested = pyqtSignal()
-    debugSnapshotRequested = pyqtSignal()
     outputLimitsRequested = pyqtSignal(int, int, bool)
     protectionValuesRequested = pyqtSignal(int, int, int, int)
     powerStateRequested = pyqtSignal(bool)
@@ -463,9 +461,6 @@ class PowerPage(ScrollArea):
         self._scrollIdleTimer.setSingleShot(True)
         self._scrollIdleTimer.setInterval(180)
         self._scrollIdleTimer.timeout.connect(self._resumeChartAfterScroll)
-        self._mockTimer = QTimer(self)
-        self._mockTimer.setInterval(MOCK_SAMPLE_INTERVAL_MS)
-        self._mockTimer.timeout.connect(self.pushMockPowerSample)
 
         self.scrollWidget = QWidget(self)
         self.scrollWidget.setObjectName("powerScrollWidget")
@@ -512,9 +507,6 @@ class PowerPage(ScrollArea):
         self.autoPollSwitch.setOffText("自动轮询")
         self.autoPollSwitch.setChecked(True)
         self.refreshButton = PushButton(FIF.SYNC, "立即刷新", self.header)
-        self.debugButton = PushButton(FIF.SEARCH, "调试快照", self.header)
-        # self.mockButton = PushButton(FIF.PLAY, "假数据", self.header)
-        # self.mockButton.setCheckable(True)
 
         self.header.addAction(BodyLabel("串口", self.header))
         self.header.addActions((
@@ -524,9 +516,7 @@ class PowerPage(ScrollArea):
             self.stateBadge,
             self.autoPollSwitch,
             self.refreshButton,
-            self.debugButton,
         ))
-        # self.header.addAction(self.mockButton)
         self.rootLayout.addWidget(self.header)
 
     def _initMetricCards(self) -> None:
@@ -809,12 +799,6 @@ class PowerPage(ScrollArea):
             return
         self.readStatusRequested.emit()
 
-    def _runDebugSnapshot(self) -> None:
-        if not self._client.is_connected:
-            self._appendLog("错误: 串口会话未连接")
-            return
-        self.debugSnapshotRequested.emit()
-
     def _onAutoPollChanged(self, checked: bool) -> None:
         """自动轮询开关变化时，直接通知协议客户端启动或停止刷新。"""
         if checked:
@@ -997,21 +981,6 @@ class PowerPage(ScrollArea):
         self.startPollingRequested.emit(POWER_POLL_INTERVAL_MS)
         self._appendLog("写入后已请求重启主机轮询")
 
-    def _handleDebugSnapshotReady(self, snapshot: DebugSnapshot) -> None:
-        """显示调试快照，并附带一段面向硬件排查的判断提示。"""
-        self._appendLog(self._client.pretty_print_debug_snapshot(snapshot))
-        self._appendLog(self._diagnoseDebugSnapshot(snapshot))
-
-    @  staticmethod
-    def _diagnoseDebugSnapshot(snapshot: DebugSnapshot) -> str:
-        if snapshot.output_voltage_raw >= 4090:
-            return "调试判断: type27 接近 4095，请优先检查 MCU ADC 或前端电路。"
-        if snapshot.ovp_set_value_mv is not None and snapshot.ovp_set_value_mv == DEFAULT_OVP_SET_VALUE_MV and abs(snapshot.output_voltage_mv - snapshot.ovp_set_value_mv) <= 5:
-            return "调试判断: type32=44000 与 type12 重叠，主机字段映射可能有误。"
-        if snapshot.loop_current_reference_ma is not None:
-            return "调试判断: 已收到控制环调试量；带载时重点看 type41/type42 是否跟随，以及 type43 是否顶到设定电压。"
-        return "调试判断: type27 数值合理；如果界面仍异常，请检查主机解析和绑定。"
-
     def _applyDisconnectedState(self) -> None:
         """回到离线 UI 状态，清掉暂存开关和正在写入的标记。"""
         self._stagedOutputEnabled = None
@@ -1045,19 +1014,6 @@ class PowerPage(ScrollArea):
         finally:
             self._appendLogBusy = False
 
-    def _setMockEnabled(self, enabled: bool) -> None:
-        if enabled:
-            self._mockTimer.start()
-            # self.mockButton.setText("停止假数据")
-            self._appendLog("假数据已开启")
-        else:
-            self._mockTimer.stop()
-            # self.mockButton.setText("假数据")
-            self._appendLog("假数据已关闭")
-
-    def pushMockPowerSample(self) -> None:
-        self.chartCard.pushMock()
-
     def suspendForDaplink(self) -> None:
         self._appendLog("DAPLink 操作开始，已暂停主机轮询。")
         self.stopPollingRequested.emit()
@@ -1077,7 +1033,6 @@ class PowerPage(ScrollArea):
         if self._shutdownDone:
             return
         self._shutdownDone = True
-        self._mockTimer.stop()
         self._writePollRestartTimer.stop()
         try:
             if self._manualSession:

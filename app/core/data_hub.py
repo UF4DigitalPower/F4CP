@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 
 from app.core.channel import ChannelConfig
@@ -76,6 +77,16 @@ class DataHub:
             self._channels[key].append(timestamp, value)
 
     def append_many(self, timestamp: float, values: dict[str, float]) -> None:
+        for key, value in values.items():
+            self.append(key, timestamp, value)
+
+    def push(self, key: str, value: float, t: float | None = None) -> None:
+        """追加单个采样点（t 缺省时取当前时间）。"""
+        self.append(key, time.time() if t is None else t, value)
+
+    def push_many(self, values: dict[str, float], t: float | None = None) -> None:
+        """批量追加采样点（t 缺省时取当前时间）。"""
+        timestamp = time.time() if t is None else t
         for key, value in values.items():
             self.append(key, timestamp, value)
 
