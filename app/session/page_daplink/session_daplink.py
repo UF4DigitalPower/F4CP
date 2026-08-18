@@ -308,22 +308,24 @@ class CommandFailed(RuntimeError):
 
 
 def _run_command(
-    args: list[str],
+    args: list[str | os.PathLike[str]],
     log_cb,
     timeout: float = 30.0,
 ) -> str:
     """运行子进程，逐行回传日志；返回合并输出。"""
-    log_cb(" ".join(str(a) for a in args), "command")
+    command_args = [os.fspath(arg) for arg in args]
+    command_text = " ".join(command_args)
+    log_cb(command_text, "command")
     try:
         proc = subprocess.Popen(
-            [str(a) for a in args],
+            command_args,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             stdin=subprocess.DEVNULL,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
     except OSError as exc:
-        raise CommandFailed(f"无法启动进程 {args[0]}: {exc}") from exc
+        raise CommandFailed(f"无法启动进程 {command_args[0]}: {exc}") from exc
 
     lines: list[str] = []
     deadline = time.monotonic() + timeout
@@ -338,11 +340,11 @@ def _run_command(
             break
         if time.monotonic() > deadline:
             proc.kill()
-            raise CommandFailed(f"命令超时（>{timeout:.0f}s）: {' '.join(args)}")
+            raise CommandFailed(f"命令超时（>{timeout:.0f}s）: {command_text}")
         time.sleep(0.02)
 
     if proc.returncode != 0:
-        raise CommandFailed(f"命令退出码 {proc.returncode}: {' '.join(args)}")
+        raise CommandFailed(f"命令退出码 {proc.returncode}: {command_text}")
     return "\n".join(lines)
 
 
