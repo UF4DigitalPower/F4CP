@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # -------------------------------
 
-from .parameter_manager import (
+from app.session.page_parameters.parameter_manager import (
     PARAMETER_SPECS,
     ParameterEntry,
     ParameterManager,

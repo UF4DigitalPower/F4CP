@@ -3,7 +3,7 @@
 
 DaplinkPageController 负责 DAPLink 下载页面的全部交互接线：
 - 扫描/连接/下载/重载目标等按钮
-- 下拉框、筛选输入、固件来源切换
+- 下拉框、固件来源切换
 - 启动任务：预加载目标 + 扫描调试器
 """
 
@@ -33,7 +33,6 @@ class DaplinkPageController(_NullPageController):
         page.scanProbeBtn.clicked.connect(page.scanProbe)
         page.connectBtn.clicked.connect(page.readInfo)
         page.reloadPackBtn.clicked.connect(page.reloadPackTargets)
-        page.targetFilterInput.textChanged.connect(page._applyTargetFilter)
         page.targetCombo.currentIndexChanged.connect(page._onTargetChanged)
 
         # 固件来源

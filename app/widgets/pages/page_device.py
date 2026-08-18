@@ -73,11 +73,12 @@ from app.session.page_device.session_device import (
     TxEvent,
 )
 from app.core.const import POWER_DATA_META, PowerCommand, PowerDataType, PowerFrameFlag
-from app.protocol.tvlcom import (
-    TvlcomFrameParser,
+from app.protocol.uf4com import (
+    Uf4Command,
+    Uf4FrameParser,
     build_frame,
-    encode_tlv,
-    iter_tlv_items,
+    encode_tv,
+    iter_tv_items,
 )
 from config import CTX, get_logger
 
@@ -159,7 +160,7 @@ class DevicePage(ScrollArea):
         self._session: Optional[DeviceTransport] = None
         self._bluetoothDevices: dict[str, str] = {}
         self._bluetoothDiscoveryAgent = None
-        self._uf4comParser: Optional[TvlcomFrameParser] = None
+        self._uf4comParser: Optional[Uf4FrameParser] = None
         self._uf4comSeq = 0
         self._rxBuf = bytearray()
         self._rxBytes = 0
@@ -640,7 +641,7 @@ class DevicePage(ScrollArea):
                 raise ValueError(f"UF4COM unsupported type ID: 0x{row.typeId:02X}")
             if data_type not in POWER_DATA_META:
                 raise ValueError(f"UF4COM unsupported type ID: 0x{row.typeId:02X}")
-            payload.extend(encode_tlv(data_type, self._coerceUf4comValue(row, data_type)))
+            payload.extend(encode_tv(data_type, self._coerceUf4comValue(row, data_type)))
         return bytes(payload)
 
     def _syncUf4comTypeIdWithKind(self, typeSpin: SpinBox, kind: str):
@@ -648,7 +649,7 @@ class DevicePage(ScrollArea):
         if suggested is not None:
             typeSpin.setValue(suggested)
 
-    def _coerceUf4comValue(self, row: _TlvRow, data_type: PowerDataType) -> bytes:
+    def _coerceUf4comValue(self, row: _TlvRow, data_type: PowerDataType) -> int:
         """按类型注册表把表格里的字符串值转成协议真正需要的 Python 值。"""
         rawValue = row.value.strip()
         if not rawValue:
@@ -659,7 +660,7 @@ class DevicePage(ScrollArea):
         if meta is None:
             raise ValueError(f"UF4COM unsupported value type: {row.kind}")
         value = int(rawValue, 0)
-        return value.to_bytes(meta.length, "little", signed=meta.signed)
+        return value
 
     def _resetUf4comProtocol(self):
         self._uf4comParser = None
@@ -667,7 +668,7 @@ class DevicePage(ScrollArea):
 
     def _initUf4comProtocol(self):
         """初始化 UF4COM 帧解析器。"""
-        self._uf4comParser = TvlcomFrameParser()
+        self._uf4comParser = Uf4FrameParser()
 
     def _uf4comTypeName(self, typeId: int) -> str:
         try:
@@ -682,42 +683,42 @@ class DevicePage(ScrollArea):
         if not payload:
             return ""
         parts = []
-        for item in iter_tlv_items(payload, strict=False):
-            name = self._uf4comTypeName(item.type_id)
+        for item in iter_tv_items(payload, strict=False):
+            name = self._uf4comTypeName(item.id)
             if item.value is None:
                 rendered = item.raw.hex(" ") if item.raw else "<read>"
             elif (
-                item.data_type is not None
-                and (meta := POWER_DATA_META.get(item.data_type)) is not None
+                item.data_id is not None
+                and (meta := POWER_DATA_META.get(item.data_id)) is not None
                 and meta.unit == "0.01C"
             ):
                 rendered = f"{item.value / 100.0:.2f} °C"
             else:
                 rendered = str(item.value)
-            parts.append(f"T{item.type_id:02X}({name}):{rendered}")
+            parts.append(f"T{item.id:02X}({name}):{rendered}")
         return ", ".join(parts)
 
     def _handleUf4comRxFrames(self, data: bytes):
         """把收到的字节喂给 UF4COM 解析器，并把解析结果写到接收日志。"""
         if self._uf4comParser is None:
             return
-        for frame in self._uf4comParser.input_bytes(data):
-            cmd = int(frame["cmd"])
-            flags = int(frame.get("flags", 0))
+        for frame in self._uf4comParser.feed(data):
+            cmd = int(frame.cmd)
+            flags = int(frame.flags)
             if flags & int(PowerFrameFlag.ERROR):
                 prefix = "UF4COM ERR"
             elif cmd in {
-                int(PowerCommand.READ_RSP),
-                int(PowerCommand.WRITE_RSP),
-                int(PowerCommand.STREAM_START_RSP),
-                int(PowerCommand.STREAM_STOP_RSP),
+                int(Uf4Command.READ_RSP),
+                int(Uf4Command.WRITE_RSP),
+                int(Uf4Command.STREAM_START_RSP),
+                int(Uf4Command.STREAM_STOP_RSP),
             }:
                 prefix = "UF4COM RSP"
             else:
                 prefix = "UF4COM RX"
             self.rxEventSignal.emit(
-                f'{prefix} cmd={cmd:02X} seq={frame["seq"]} '
-                f'[{self._formatUf4comPayloadItems(bytes(frame["payload"]))}]'
+                f'{prefix} cmd={cmd:02X} seq={frame.seq} '
+                f'[{self._formatUf4comPayloadItems(frame.data)}]'
             )
 
     def _parseRawInput(self, text: str, fmt: str) -> bytes:

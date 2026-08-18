@@ -5,7 +5,7 @@
 - 页面通过 postEvent 发送 DaplinkRequestEvent（action: scan_probes / load_targets /
   connect / download），会话在 customEvent 中分派到后台 QThread 执行。
 - 后台线程调用 DAPLINK\\tools\\uf4-target\\uf4-target.exe 切换 SWD 目标
-  （G474 / F429 / ESP32），再用 pyOCD 完成 G474RBT6/F429IGT6 固件下载。
+  （G474 / F429），再用 pyOCD 完成 G474RBT6/F429IGT6 固件下载。
 - 结果通过事件回传给页面（_event_receiver），页面 event() 处理并刷新 UI。
 """
 
@@ -277,17 +277,6 @@ UF4_TARGETS: list[DaplinkTargetInfo] = [
         ram_size="256KB",
         pack_name="pyOCD Builtin",
         pack_version="builtin",
-    ),
-    DaplinkTargetInfo(
-        target_id="esp32",
-        part_number="ESP32",
-        target_name="esp32",
-        family="ESP32",
-        flash_start="0x10000",
-        flash_size="4MB",
-        ram_size="520KB",
-        pack_name="UF4 Builtin (uf4-target)",
-        pack_version="1.0",
     ),
 ]
 
@@ -663,11 +652,6 @@ class _DaplinkWorker(QThread):
         target = self._resolve_target(payload.connect)
         if target is None:
             raise CommandFailed("下载前请先在页面选择目标芯片（STM32G474 / STM32F429）。")
-
-        if target.target_id == "esp32":
-            raise CommandFailed(
-                "ESP32 请使用本页面下方的 ESP32 烧录卡片，通过 esptool 串口烧录。"
-            )
 
         current = self._read_current_target()
         if current != target.target_id:

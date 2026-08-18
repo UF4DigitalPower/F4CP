@@ -171,36 +171,30 @@ class DaplinkPage(ScrollArea):
         self.reloadPackBtn = PushButton(FIF.ROTATE, "", self.connectCard)
         grid.addWidget(self.reloadPackBtn, 0, 2)
 
-        self.targetFilterLabel = BodyLabel(self.connectCard)
-        grid.addWidget(self.targetFilterLabel, 1, 0)
-        self.targetFilterInput = LineEdit(self.connectCard)
-        self.targetFilterInput.setText("G474")
-        grid.addWidget(self.targetFilterInput, 1, 1)
-
         self.frequencyLabel = BodyLabel(self.connectCard)
-        grid.addWidget(self.frequencyLabel, 2, 0)
+        grid.addWidget(self.frequencyLabel, 1, 0)
         self.frequencyInput = LineEdit(self.connectCard)
         self.frequencyInput.setText("100000")
-        grid.addWidget(self.frequencyInput, 2, 1)
+        grid.addWidget(self.frequencyInput, 1, 1)
 
         self.connectModeLabel = BodyLabel(self.connectCard)
-        grid.addWidget(self.connectModeLabel, 2, 2)
+        grid.addWidget(self.connectModeLabel, 1, 2)
         self.connectModeCombo = ComboBox(self.connectCard)
         self.connectModeCombo.addItems(["halt", "under-reset", "pre-reset", "attach"])
         self.connectModeCombo.setCurrentText("under-reset")
-        grid.addWidget(self.connectModeCombo, 2, 3)
+        grid.addWidget(self.connectModeCombo, 1, 3)
 
         self.stateTitleLabel = BodyLabel(self.connectCard)
-        grid.addWidget(self.stateTitleLabel, 3, 0)
+        grid.addWidget(self.stateTitleLabel, 2, 0)
         self.stateLabel = BodyLabel(self.connectCard)
         self.stateLabel.setStyleSheet("font-weight: bold; color: #C42B1C;")
-        grid.addWidget(self.stateLabel, 3, 1)
+        grid.addWidget(self.stateLabel, 2, 1)
 
         self.packSourceTitleLabel = BodyLabel(self.connectCard)
-        grid.addWidget(self.packSourceTitleLabel, 3, 2)
+        grid.addWidget(self.packSourceTitleLabel, 2, 2)
         self.packSummaryLabel = BodyLabel(self.connectCard)
         self.packSummaryLabel.setWordWrap(True)
-        grid.addWidget(self.packSummaryLabel, 3, 3)
+        grid.addWidget(self.packSummaryLabel, 2, 3)
         layout.addLayout(grid)
 
         self.targetSummaryLabel = BodyLabel(self.connectCard)
@@ -457,10 +451,6 @@ class DaplinkPage(ScrollArea):
             '选择 STM32G474RBT6 / STM32F429IGT6'
         )
         self.reloadPackBtn.setText('重载目标')
-        self.targetFilterLabel.setText('目标过滤')
-        self.targetFilterInput.setPlaceholderText(
-            '输入 G474RBT6 / F429IGT6 等关键字'
-        )
         self.frequencyLabel.setText('SWD 频率')
         self.frequencyInput.setPlaceholderText(
             '例如 1000000 / 4M / 4000K'
@@ -637,59 +627,7 @@ class DaplinkPage(ScrollArea):
         return str(relative)
 
     def _onInternalFirmwareChanged(self):
-        if self.firmwareSourceCombo.currentIndex() != 0:
-            return
-
-        firmwareKind = self._firmwareKindFromPath(self._selectedInternalFirmwarePath())
-        if firmwareKind == "Power":
-            self.targetFilterInput.setText("STM32G474")
-        elif firmwareKind == "Upper":
-            self.targetFilterInput.setText("STM32F429")
-
-    @staticmethod
-    def _firmwareKindFromPath(path: Path | str | None) -> str | None:
-        if path is None:
-            return None
-
-        text = str(path).lower()
-        if "uf4dp_power" in text or "\\power\\" in text or "/power/" in text:
-            return "Power"
-        if "uf4dp_upper" in text or "\\upper\\" in text or "/upper/" in text:
-            return "Upper"
-        return None
-
-    def _validateFirmwareTargetMatch(self, firmwarePath: str) -> bool:
-        target = self._selectedTarget()
-        if target is None:
-            return True
-
-        firmwareKind = self._firmwareKindFromPath(firmwarePath)
-        targetText = " ".join(
-            [
-                target.target_name,
-                target.part_number,
-                target.family,
-                target.pack_name,
-            ]
-        ).lower()
-
-        if firmwareKind == "Power" and "g474" not in targetText:
-            self.showMessage(
-                '固件与目标不匹配',
-                'Power 固件必须下载到 STM32G474。',
-                "warning",
-            )
-            return False
-
-        if firmwareKind == "Upper" and "f429" not in targetText:
-            self.showMessage(
-                '固件与目标不匹配',
-                'Upper 固件必须下载到 STM32F429。',
-                "warning",
-            )
-            return False
-
-        return True
+        pass
 
     def clearLog(self):
         self.logEdit.clear()
@@ -749,71 +687,6 @@ class DaplinkPage(ScrollArea):
             )
         )
 
-    def startDownload(self):
-        filePath = self._selectedFirmwarePath()
-        if not filePath or not os.path.isfile(filePath):
-            self.showMessage(
-                '固件无效',
-                '请先选择有效的固件文件。',
-                "warning",
-            )
-            return
-
-        if self._selectedProbe() is None:
-            self.showMessage(
-                '未检测到调试器',
-                '请先连接 DAPLink / CMSIS-DAP，再开始烧录。',
-                "warning",
-            )
-            return
-
-        if self._selectedTarget() is None:
-            self.showMessage(
-                '缺少目标',
-                '请先从本地 Pack 中选择目标。',
-                "warning",
-            )
-            return
-
-        if self._deviceInfo is None or self._deviceInfo.probe_uid in {"", "--"}:
-            self.showMessage(
-                '请先连接目标',
-                '请先点击“连接”读取调试器与目标芯片信息，再开始烧录。',
-                "warning",
-            )
-            return
-
-        if not self._validateFirmwareTargetMatch(filePath):
-            return
-
-        baseAddress = self.baseAddressInput.text().strip()
-        if baseAddress:
-            try:
-                int(baseAddress, 0)
-            except ValueError:
-                self.showMessage(
-                    '地址无效',
-                    "Bin 起始地址必须是十进制或十六进制数字。",
-                    "warning",
-                )
-                return
-
-        if self._session.is_busy:
-            return
-        self._preparePowerPageForDaplink()
-        self._postRequest(
-            daplink_pyocd.DaplinkRequestPayload(
-                action="download",
-                connect=self._buildConnectConfig(),
-                file_path=filePath,
-                base_address=baseAddress,
-                erase_mode=self.eraseModeCombo.currentText().strip(),
-                smart_flash=self.smartFlashSwitch.isChecked(),
-                trust_crc=self.trustCrcSwitch.isChecked(),
-                reset_after_download=self.resetAfterDownloadSwitch.isChecked(),
-            )
-        )
-
     def startEsp32Flash(self):
         filePath = self.esp32FileInput.text().strip()
         if not filePath or not os.path.isfile(filePath):
@@ -869,6 +742,68 @@ class DaplinkPage(ScrollArea):
         self._activeProgressTarget = "esp32"
         self._preparePowerPageForDaplink()
         self._postRequest(daplink_pyocd.DaplinkRequestPayload(action="esp32_reset"))
+
+    def startDownload(self):
+        filePath = self._selectedFirmwarePath()
+        if not filePath or not os.path.isfile(filePath):
+            self.showMessage(
+                '固件无效',
+                '请先选择有效的固件文件。',
+                "warning",
+            )
+            return
+
+        if self._selectedProbe() is None:
+            self.showMessage(
+                '未检测到调试器',
+                '请先连接 DAPLink / CMSIS-DAP，再开始烧录。',
+                "warning",
+            )
+            return
+
+        if self._selectedTarget() is None:
+            self.showMessage(
+                '缺少目标',
+                '请先从本地 Pack 中选择目标。',
+                "warning",
+            )
+            return
+
+        if self._deviceInfo is None or self._deviceInfo.probe_uid in {"", "--"}:
+            self.showMessage(
+                '请先连接目标',
+                '请先点击“连接”读取调试器与目标芯片信息，再开始烧录。',
+                "warning",
+            )
+            return
+
+        baseAddress = self.baseAddressInput.text().strip()
+        if baseAddress:
+            try:
+                int(baseAddress, 0)
+            except ValueError:
+                self.showMessage(
+                    '地址无效',
+                    "Bin 起始地址必须是十进制或十六进制数字。",
+                    "warning",
+                )
+                return
+
+        if self._session.is_busy:
+            return
+        self._preparePowerPageForDaplink()
+        self._postRequest(
+            daplink_pyocd.DaplinkRequestPayload(
+                action="download",
+                connect=self._buildConnectConfig(),
+                file_path=filePath,
+                base_address=baseAddress,
+                erase_mode=self.eraseModeCombo.currentText().strip(),
+                smart_flash=self.smartFlashSwitch.isChecked(),
+                trust_crc=self.trustCrcSwitch.isChecked(),
+                reset_after_download=self.resetAfterDownloadSwitch.isChecked(),
+            )
+        )
 
     def _preparePowerPageForDaplink(self) -> None:
         if self._powerPageSuspended:
@@ -929,7 +864,6 @@ class DaplinkPage(ScrollArea):
             self.downloadButton,
             self.probeCombo,
             self.targetCombo,
-            self.targetFilterInput,
             self.frequencyInput,
             self.connectModeCombo,
             self.browseButton,
@@ -1038,23 +972,9 @@ class DaplinkPage(ScrollArea):
             )
         )
         self.packSummaryLabel.setStyleSheet("color: #0F7B0F;")
-        self._applyTargetFilter(self.targetFilterInput.text())
-
-    def _applyTargetFilter(self, text: str = ""):
-        keyword = (text or "").strip().lower()
         current = self._selectedTarget()
         currentTargetName = current.target_name if current else ""
-
-        if keyword:
-            filtered = [
-                item
-                for item in self._allTargetItems
-                if keyword in item.part_number.lower()
-                or keyword in item.target_name.lower()
-                or keyword in item.family.lower()
-            ]
-        else:
-            filtered = list(self._allTargetItems)
+        filtered = list(self._allTargetItems)
 
         self.targetCombo.blockSignals(True)
         self.targetCombo.clear()
@@ -1064,7 +984,7 @@ class DaplinkPage(ScrollArea):
             self.targetCombo.addItem('没有匹配的 target')
             self.targetCombo.blockSignals(False)
             self.targetSummaryLabel.setText(
-                "当前筛选没有命中 target，请尝试 G474RBT6、F429IGT6、G474 或 F429。"
+                "没有可用 target，请检查 DAPLink 目标配置。"
             )
             self.targetSummaryLabel.setStyleSheet("color: #C42B1C;")
             return

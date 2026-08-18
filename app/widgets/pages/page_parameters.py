@@ -18,7 +18,7 @@ from qfluentwidgets import (
     TitleLabel,
     setFont,
 )
-from app.core.parameter_manager import PARAMETER_SPECS, ParameterManager, ParameterSpec
+from app.session.page_parameters.parameter_manager import PARAMETER_SPECS, ParameterManager, ParameterSpec
 from app.widgets.components import ChipTone, PageHeader, StatusChip
 
 
@@ -240,4 +240,3 @@ class ParametersPage(ScrollArea):
                 border: none;
             }
         """)
-

@@ -47,7 +47,18 @@ class ParameterEntry:
 
 
 class ParameterError(ValueError):
-    pass
+    def __init__(
+        self,
+        message: str,
+        *,
+        key: str | int | None = None,
+        spec: ParameterSpec | None = None,
+        value: int | None = None,
+    ):
+        super().__init__(message)
+        self.key = key
+        self.spec = spec
+        self.value = value
 
 
 class ParameterNotFoundError(ParameterError):
@@ -184,7 +195,7 @@ class ParameterManager:
         if isinstance(key, int):
             found = self._by_id.get(key)
             if found is None:
-                raise ParameterNotFoundError(f"Unknown parameter id 0x{key:02X}")
+                raise ParameterNotFoundError(f"Unknown parameter id 0x{key:02X}", key=key)
             return found
         if key in self._by_note:
             return self._by_note[key]
@@ -194,7 +205,7 @@ class ParameterManager:
             numeric_id = -1
         if numeric_id in self._by_id:
             return self._by_id[numeric_id]
-        raise ParameterNotFoundError(f"Unknown parameter {key!r}")
+        raise ParameterNotFoundError(f"Unknown parameter {key!r}", key=key)
 
     def entry(self, key: str | int) -> ParameterEntry:
         spec = self.spec(key)
@@ -212,7 +223,7 @@ class ParameterManager:
     def write(self, key: str | int, value: int) -> None:
         spec = self.spec(key)
         if not spec.writable:
-            raise ParameterPermissionError(f"{spec.note} is read only")
+            raise ParameterPermissionError(f"{spec.note} is read only", key=key, spec=spec)
         self._values[spec.note] = self._checked_value(spec, value)
 
     def write_many(self, values: dict[str | int, int]) -> None:
@@ -307,7 +318,9 @@ class ParameterManager:
         value = int(value)
         if value < spec.minimum or value > spec.maximum:
             raise ParameterRangeError(
-                f"{spec.note} value {value} out of range {spec.minimum}..{spec.maximum}"
+                f"{spec.note} value {value} out of range {spec.minimum}..{spec.maximum}",
+                spec=spec,
+                value=value,
             )
         return value
 

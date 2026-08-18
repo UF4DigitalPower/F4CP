@@ -15,6 +15,10 @@
         "CheckUpdateAtStartUp": false,
         "UpdateUrl": "https://github.com/UF4OVER/UF4DigitalPower/releases"
     },
+    "Daplink": {
+        "OpenocdExe": "",
+        "Uf4TargetExe": ""
+    },
     "FirmwareRemote": {
         "BaseUrl": "",
         "GithubOwner": "UF4OVER",
@@ -28,7 +32,7 @@
             "PingFang SC"
         ],
         "ThemeColor": "#ffff1010",
-        "ThemeMode": "Light"
+        "ThemeMode": "Dark"
     },
     "Appearance": {
         "FontFamily": "Blender Pro Book",
