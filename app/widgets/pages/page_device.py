@@ -19,7 +19,7 @@ import time
 from dataclasses import dataclass
 from typing import Optional, Protocol
 
-from PyQt5.QtCore import QCoreApplication, QObject, Qt, QTimer, pyqtSignal
+from PyQt5.QtCore import QCoreApplication, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QTextCharFormat, QTextCursor
 from PyQt5.QtWidgets import (
     QGridLayout,
@@ -54,14 +54,14 @@ from qfluentwidgets import (
     SwitchButton,
     TableWidget,
     TextEdit,
-    TitleLabel,
     isDarkTheme,
 )
 
 from app.ctrl import DevicePageController
 from app.manager import StyleSheet
 from app.widgets.components import ChipTone, PageHeader, StatusChip
-from app.session import (
+from app.session.page_device.other_device import listSerialPorts
+from app.session.page_device.session_device import (
     ErrorEvent,
     PowerBluetoothSession,
     RxEvent,
@@ -71,7 +71,6 @@ from app.session import (
     SerialState,
     StateEvent,
     TxEvent,
-    listSerialPorts,
 )
 from app.core.const import POWER_DATA_META, PowerCommand, PowerDataType, PowerFrameFlag
 from app.protocol.tvlcom import (
@@ -907,7 +906,7 @@ class DevicePage(ScrollArea):
         if not self._session or not self._session.is_open:
             return
         try:
-            from app.session.session_serial import SendEvent
+            from app.session.page_device.session_device import SendEvent
             if isinstance(self._session, SerialSession):
                 QCoreApplication.postEvent(self._session, SendEvent(data))
             else:

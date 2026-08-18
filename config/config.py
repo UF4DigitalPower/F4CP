@@ -245,6 +245,11 @@ class F4CPConfig(QConfig):
     fontFile = ConfigItem("Appearance", "FontFile", "__system__")
     fontFamily = ConfigItem("Appearance", "FontFamily", "")
 
+    # DAPLink 下载工具路径（留空时自动探测）
+    daplinkUf4TargetExe = ConfigItem("Daplink", "Uf4TargetExe", "")
+    daplinkOpenocdExe = ConfigItem("Daplink", "OpenocdExe", "")
+    fontFamily = ConfigItem("Appearance", "FontFamily", "")
+
     appRestartSig = pyqtSignal()
 
 

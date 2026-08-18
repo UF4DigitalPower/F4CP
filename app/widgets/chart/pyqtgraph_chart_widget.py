@@ -32,7 +32,7 @@ logger = get_logger("Chart")
 # 坐标轴文字 / 图例 / 网格等元素颜色不随主题（观感缺陷）；只有在明确需要
 # 性能并接受主题不一致时，才设置环境变量 F4CP_OPENGL=1 启用。
 _USE_OPENGL = os.environ.get("F4CP_OPENGL", "0").strip().lower() not in ("0", "false", "no")
-if _USE_OPENGL:
+if 0:
     try:
         pg.setConfigOptions(useOpenGL=True, antialias=True)
         logger.info("pyqtgraph OpenGL rendering enabled (set F4CP_OPENGL=0 to disable)")

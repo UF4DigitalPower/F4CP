@@ -33,11 +33,8 @@ from app.core.utility import showMessage
 from app.ctrl import PowerPageController
 from app.manager import StyleSheet
 
-from app.session import (
-    DEFAULT_STATUS_VALUES, F4CPPowerClient, PowerStatus, SerialConfig,
-    SerialSession, listSerialPorts, pretty_faults,
-    build_status,
-)
+from app.session.page_power.other_power import DEFAULT_STATUS_VALUES, build_status, listSerialPorts, pretty_faults
+from app.session.page_power.session_power import F4CPPowerClient, PowerStatus, SerialConfig, SerialSession
 from app.widgets.components import PageHeader
 from app.widgets.components.chip import ChipTone, StatusChip as BaseStatusChip
 from app.widgets.chart.chart_model import ChartModel

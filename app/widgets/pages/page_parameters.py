@@ -130,7 +130,7 @@ class ParametersPage(ScrollArea):
         readonly_count = total_count - writable_count
         self.header = PageHeader(
             "参数设置",
-            f"参数来源：STM32G474RBT6 / uf4com.h + parameter_manager.c，"
+            f"参数来源：STM32G474RBT6"
             f"共 {total_count} 项，RW {writable_count} 项，RO {readonly_count} 项",
             self.scrollWidget,
         )

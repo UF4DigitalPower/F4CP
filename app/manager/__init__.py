@@ -173,6 +173,25 @@ class _DisabledFirmwareHistoryManager:
         return False
 
 
+
+class _LocalFirmwareManager:
+    """扫描本地 src/firmware 目录中的固件 .bin 文件。"""
+
+    def GetLowerFirmware(self):
+        return self._scan(CTX.dirs.FirmwarePowerDir)
+
+    def GetUpperFirmware(self):
+        return self._scan(CTX.dirs.FirmwareUpperDir)
+
+    @staticmethod
+    def _scan(directory) -> list:
+        from pathlib import Path
+
+        if not Path(directory).is_dir():
+            return []
+        return sorted(Path(directory).rglob("*.bin"))
+
+
 class _DisabledFirmwareManager:
     def GetLowerFirmware(self):
         return []
@@ -204,7 +223,7 @@ update_manager = _DisabledUpdateManager()
 firmware_check_manager = _DisabledFirmwareCheckManager()
 firmware_download_manager = _DisabledFirmwareDownloadManager()
 firmware_history_manager = _DisabledFirmwareHistoryManager()
-firmware_manager = _DisabledFirmwareManager()
+firmware_manager = _LocalFirmwareManager()
 
 
 def cached_session_state() -> GithubSessionState:

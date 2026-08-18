@@ -23,7 +23,7 @@ from qfluentwidgets import isDarkTheme
 from app.widgets.chart.chart_value_panel import ChartValuePanel
 from app.widgets.chart.chart_model import ChartModel
 from app.widgets.chart.chart_control_panel import ChartControlPanel
-from app.widgets.chart.gpu_chart_widget import PyQtGraphChartWidget
+from app.widgets.chart.pyqtgraph_chart_widget import PyQtGraphChartWidget
 from config import cfg, get_logger
 
 logger = get_logger("RealtimeChart")
@@ -33,8 +33,8 @@ class RealtimeChartWidget(QWidget):
     """
     实时图表外层控件。
 
-    统一使用 GPU 图表，并将采样输入与界面重绘解耦。
-    数据流可以高频写入，界面重绘限制在可控帧率内。
+    统一使用 PyQtGraph 图表（CPU 渲染，主题颜色一致），并将采样输入与界面
+    重绘解耦。数据流可以高频写入，界面重绘限制在可控帧率内。
     """
 
     DEFAULT_RENDER_INTERVAL_MS = 50
@@ -103,7 +103,7 @@ class RealtimeChartWidget(QWidget):
         self.initializeChart()
 
     def initializeChart(self) -> None:
-        """Create the GPU chart lazily."""
+        """Create the PyQtGraph chart lazily."""
         if self._chart_initialized:
             return
         self._chart_initialized = True
@@ -112,7 +112,7 @@ class RealtimeChartWidget(QWidget):
         self.chart_widget.set_title(self._pending_title)
         self.chart_widget.snapshotUpdated.connect(self._queue_value_panel_snapshot)
         self.chart_area_layout.insertWidget(0, self.chart_widget, 1)
-        logger.info("Using GPU chart renderer for realtime chart rendering.")
+        logger.info("Using PyQtGraph for realtime chart rendering.")
 
         self.refreshTheme()
         self.mark_data_dirty()
