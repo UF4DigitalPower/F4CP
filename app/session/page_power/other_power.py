@@ -15,7 +15,14 @@ def build_status(values: dict | None = None) -> PowerStatus:
 
 
 def listSerialPorts() -> list[str]:
-    return []
+    try:
+        from serial.tools import list_ports
+        return sorted(
+            {port.device for port in list_ports.comports() if port.device},
+            key=lambda value: (value.upper().startswith("COM"), value.upper()),
+        )
+    except Exception:
+        return []
 
 
 def pretty_faults(fault_state: int) -> str:

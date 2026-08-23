@@ -22,6 +22,7 @@ class StyleSheet(StyleSheetBase, Enum):
     BATTERY_PAGE = "BatteryPage"
     DAPLINK_PAGE = "DaplinkFlashPage"
     DEVICE_PAGE = "DevicePage"
+    ADP_TRAINING_PAGE = "AdpTrainingPage"
     HOME_PAGE = "HomePage"
     POWER_PAGE = "PowerPage"
     SETTINGS_PAGE = "SettingsPage"

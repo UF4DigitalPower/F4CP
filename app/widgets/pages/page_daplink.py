@@ -392,6 +392,13 @@ class DaplinkPage(ScrollArea):
         self.esp32FlashSizeCombo.setCurrentText("detect")
         grid.addWidget(self.esp32FlashSizeCombo, 2, 1)
 
+        self.esp32ChipLabel = BodyLabel(self.esp32Card)
+        grid.addWidget(self.esp32ChipLabel, 3, 0)
+        self.esp32ChipCombo = ComboBox(self.esp32Card)
+        self.esp32ChipCombo.addItems(["auto", "esp32c6", "esp32", "esp32s3", "esp32s2", "esp32c3", "esp32c2"])
+        self.esp32ChipCombo.setCurrentText("auto")
+        grid.addWidget(self.esp32ChipCombo, 3, 1)
+
         self.esp32EraseSwitch = SwitchButton(self.esp32Card)
         self.esp32EraseSwitch.setChecked(False)
         grid.addWidget(self.esp32EraseSwitch, 2, 2)
@@ -492,12 +499,13 @@ class DaplinkPage(ScrollArea):
         self.esp32PortCombo.setPlaceholderText('扫描并选择 ESP32 CDC 串口')
         self.scanEsp32PortButton.setText('扫描串口')
         self.esp32FileInput.setPlaceholderText(
-            '选择待烧录的 ESP32 固件文件（通常为 .bin）'
+            '选择待烧录的 ESP 固件文件（.bin / .hex）'
         )
         self.browseEsp32FileButton.setText('浏览')
         self.esp32AddressLabel.setText('烧录地址')
         self.esp32AddressInput.setPlaceholderText('例如 0x10000')
         self.esp32BaudLabel.setText('波特率')
+        self.esp32ChipLabel.setText('芯片')
         self.esp32FlashModeLabel.setText('Flash Mode')
         self.esp32FlashFreqLabel.setText('Flash Freq')
         self.esp32FlashSizeLabel.setText('Flash Size')
@@ -555,10 +563,11 @@ class DaplinkPage(ScrollArea):
             self,
             '选择 ESP32 固件',
             "",
-            'ESP32 固件 (*.bin);;所有文件 (*)',
+            'ESP 固件 (*.bin *.hex);;所有文件 (*)',
         )
         if filePath:
             self.esp32FileInput.setText(filePath)
+            self._inferEspChipFromPath(filePath)
 
     def _setFirmwareSourceItems(self):
         currentIndex = self.firmwareSourceCombo.currentIndex()
@@ -726,6 +735,7 @@ class DaplinkPage(ScrollArea):
                 action="esp32_flash",
                 file_path=filePath,
                 esp_port=port,
+                esp_chip=self.esp32ChipCombo.currentText().strip(),
                 esp_baud=self.esp32BaudCombo.currentText().strip(),
                 esp_address=self.esp32AddressInput.text().strip(),
                 esp_flash_mode=self.esp32FlashModeCombo.currentText().strip(),
@@ -845,6 +855,14 @@ class DaplinkPage(ScrollArea):
             return self._esp32PortItems[index].device
         return ""
 
+    def _inferEspChipFromPath(self, filePath: str):
+        name = Path(filePath).name.lower()
+        for chip in ("esp32c6", "esp32s3", "esp32s2", "esp32c3", "esp32c2", "esp32"):
+            if chip in name:
+                self.esp32ChipCombo.setCurrentText(chip)
+                return
+        self.esp32ChipCombo.setCurrentText("auto")
+
     def _selectedTarget(self) -> daplink_pyocd.DaplinkTargetInfo | None:
         index = self.targetCombo.currentIndex()
         if 0 <= index < len(self._targetItems):
@@ -876,6 +894,7 @@ class DaplinkPage(ScrollArea):
             self.esp32FileInput,
             self.browseEsp32FileButton,
             self.esp32AddressInput,
+            self.esp32ChipCombo,
             self.esp32BaudCombo,
             self.esp32FlashModeCombo,
             self.esp32FlashFreqCombo,

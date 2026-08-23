@@ -115,6 +115,7 @@ class DaplinkRequestPayload:
     trust_crc: bool = False
     reset_after_download: bool = True
     esp_port: str = ""
+    esp_chip: str = ""
     esp_baud: str = ""
     esp_address: str = ""
     esp_flash_mode: str = ""
@@ -382,6 +383,40 @@ def _parse_int_text(text: str, default: int, label: str) -> int:
         return int(raw, 0)
     except ValueError as exc:
         raise CommandFailed(f"{label} 无效: {raw}") from exc
+
+
+def _is_esp32_connect_error(message: str) -> bool:
+    lowered = message.lower()
+    return any(
+        marker in lowered
+        for marker in (
+            "failed to connect to esp32",
+            "no serial data received",
+            "timed out waiting for packet header",
+            "serial exception",
+        )
+    )
+
+
+def _resolve_esp_chip(chip: str, file_path: str) -> str:
+    requested = (chip or "").strip().lower()
+    if requested and requested != "auto":
+        return requested
+
+    name = Path(file_path).name.lower()
+    for candidate in (
+        "esp32c6",
+        "esp32s3",
+        "esp32s2",
+        "esp32c3",
+        "esp32c2",
+        "esp32h2",
+        "esp32p4",
+        "esp32",
+    ):
+        if candidate in name:
+            return candidate
+    return "esp32"
 
 
 def _windows_bus_reported_port_descriptions(port_devices: list[str]) -> dict[str, str]:
@@ -727,7 +762,23 @@ class _DaplinkWorker(QThread):
             raise CommandFailed("未找到 uf4-target.exe，请检查配置或 DAPLINK 仓库路径。")
         self._log("ESP32 进入下载模式")
         self._command([exe, "esp32-boot"], timeout=10.0)
-        time.sleep(0.35)
+        time.sleep(1.5)
+
+    def _esp32_esptool(self, args: list[str], timeout: float) -> str:
+        last_error: CommandFailed | None = None
+        for attempt in range(1, 3):
+            self._esp32_boot()
+            try:
+                return self._command(args, timeout=timeout)
+            except CommandFailed as exc:
+                last_error = exc
+                if attempt >= 2 or not _is_esp32_connect_error(str(exc)):
+                    raise
+                self._log("ESP32 连接失败，准备重试一次", "warning")
+                time.sleep(0.8)
+        if last_error is not None:
+            raise last_error
+        raise CommandFailed("ESP32 esptool 执行失败")
 
     def _esp32_reset(self) -> None:
         exe = resolve_uf4_target_exe()
@@ -745,13 +796,13 @@ class _DaplinkWorker(QThread):
         if not port:
             raise CommandFailed("请先选择 ESP32 串口。")
 
+        chip = _resolve_esp_chip(payload.esp_chip, file_path)
         baud = _parse_int_text(payload.esp_baud, 921600, "ESP32 波特率")
         address = _parse_int_text(payload.esp_address, 0x10000, "ESP32 烧录地址")
         flash_mode = (payload.esp_flash_mode or "dio").strip() or "dio"
         flash_freq = (payload.esp_flash_freq or "40m").strip() or "40m"
         flash_size = (payload.esp_flash_size or "detect").strip() or "detect"
 
-        self._esp32_boot()
         self.sig_progress.emit(5.0)
 
         if payload.esp_erase:
@@ -760,7 +811,7 @@ class _DaplinkWorker(QThread):
                 "-m",
                 "esptool",
                 "--chip",
-                "esp32",
+                chip,
                 "--port",
                 port,
                 "--baud",
@@ -769,10 +820,12 @@ class _DaplinkWorker(QThread):
                 "no-reset",
                 "--after",
                 "no-reset",
+                "--connect-attempts",
+                "20",
                 "erase-flash",
             ]
             self._log("ESP32 擦除 Flash")
-            self._command(erase_args, timeout=120.0)
+            self._esp32_esptool(erase_args, timeout=120.0)
             self.sig_progress.emit(20.0)
 
         flash_args = [
@@ -780,7 +833,7 @@ class _DaplinkWorker(QThread):
             "-m",
             "esptool",
             "--chip",
-            "esp32",
+            chip,
             "--port",
             port,
             "--baud",
@@ -789,6 +842,8 @@ class _DaplinkWorker(QThread):
             "no-reset",
             "--after",
             "no-reset",
+            "--connect-attempts",
+            "20",
             "write-flash",
             "-z",
             "--flash-mode",
@@ -802,7 +857,7 @@ class _DaplinkWorker(QThread):
         ]
         self._log(f"ESP32 esptool 烧录开始: {Path(file_path).name} -> {port} @ {hex(address)}")
         self.sig_progress.emit(25.0)
-        output = self._command(flash_args, timeout=240.0)
+        output = self._esp32_esptool(flash_args, timeout=240.0)
         output_lower = output.lower()
         if not any(marker in output_lower for marker in ("hash of data verified", "hard resetting", "leaving", "wrote")):
             raise CommandFailed("esptool 输出异常：未检测到写入/校验完成信息。")

@@ -18,6 +18,12 @@ class PowerDataType(IntEnum):
     SET_CURRENT_LIMIT = 18
     POWER_STATE = 21
     FAULT_STATE = 22
+    ADP_VOLTAGE_ERROR = 0x28
+    LOOP_CURRENT_REFERENCE = 0x2A
+    ADP_ACTION = 0x2C
+    ADP_APPLIED_ACTION = 0x2D
+    ADP_CRITIC_Q = 0x2E
+    ADP_TD_ERROR = 0x2F
 
 
 class PowerFrameFlag(IntEnum):
