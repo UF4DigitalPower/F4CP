@@ -8,7 +8,13 @@ import time
 from pathlib import Path
 
 from PyQt5.QtCore import QProcess, QTimer
-from PyQt5.QtWidgets import QFileDialog, QGridLayout, QHBoxLayout, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import (
+    QFileDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QVBoxLayout,
+    QWidget,
+)
 from qfluentwidgets import (BodyLabel, CardWidget, CaptionLabel, ComboBox,
                              LineEdit, PrimaryPushButton, PushButton,
                              ScrollArea, StrongBodyLabel, TextEdit)
@@ -26,8 +32,16 @@ except Exception:  # pragma: no cover - optional until capture is used
     serial = None
 
 STREAM_IDS = (0x11, 0x0A, 0x0C, 0x0B, 0x0D, 0x2A, 0x2D)
-CSV_FIELDS = ("episode", "step", "vref_v", "vin_v", "vout_v", "iin_a",
-              "iout_a", "iref_applied_a")
+CSV_FIELDS = (
+    "episode",
+    "step",
+    "vref_v",
+    "vin_v",
+    "vout_v",
+    "iin_a",
+    "iout_a",
+    "iref_applied_a",
+)
 
 
 class AdpTrainingPage(ScrollArea):
@@ -40,39 +54,69 @@ class AdpTrainingPage(ScrollArea):
         self.layout.setContentsMargins(24, 24, 24, 24)
         self.layout.setSpacing(14)
 
-        header = PageHeader("ADP 训练数据", "Forward 拓扑数据采集、CSV 数据集管理与离线 Actor-Critic 训练。", root)
+        header = PageHeader(
+            "ADP 训练数据",
+            "Forward 拓扑数据采集、CSV 数据集管理与离线 Actor-Critic 训练。",
+            root,
+        )
         self.connectionPill = StatusChip("未连接", ChipTone.DANGER, header)
         header.addAction(self.connectionPill)
         self.layout.addWidget(header)
 
-        card = CardWidget(root); card.setObjectName("AdpCaptureCard")
+        card = CardWidget(root)
+        card.setObjectName("AdpCaptureCard")
         grid = QGridLayout(card)
-        grid.setContentsMargins(20, 18, 20, 20); grid.setHorizontalSpacing(14); grid.setVerticalSpacing(10)
+        grid.setContentsMargins(20, 18, 20, 20)
+        grid.setHorizontalSpacing(14)
+        grid.setVerticalSpacing(10)
         self.port = ComboBox(card); self.port.setMinimumWidth(150)
         self.baud = ComboBox(card); self.baud.addItems(["115200", "230400", "460800", "921600"])
         self.refresh = PushButton("刷新串口", card); self.refresh.clicked.connect(self.refresh_ports)
         self.ilimit = LineEdit(card); self.ilimit.setText("20")
-        self.file = LineEdit(card); self.file.setText(str(Path.cwd() / "adp_forward_capture.csv"))
+        self.epochs = LineEdit(card); self.epochs.setText("100")
+        self.validation = LineEdit(card); self.validation.setText("0.20")
+        self.seed = LineEdit(card); self.seed.setText("7")
+        self.file = LineEdit(card)
+        self.file.setText(str(self._default_dataset_path()))
         self.browse = PushButton("选择 CSV", card); self.browse.clicked.connect(self.choose_file)
+        self.output = LineEdit(card)
+        self.output.setText(str(self._default_output_path()))
+        self.browse_output = PushButton("选择头文件", card)
+        self.browse_output.clicked.connect(self.choose_output)
         grid.addWidget(StrongBodyLabel("采集配置", card), 0, 0, 1, 3)
-        controls = [("串口", self.port), ("波特率", self.baud), ("Ilimit (A)", self.ilimit),
-                    ("保存文件", self.file)]
+        controls = [
+            ("串口", self.port),
+            ("波特率", self.baud),
+            ("Ilimit (A)", self.ilimit),
+            ("Epoch", self.epochs),
+            ("验证比例", self.validation),
+            ("Seed", self.seed),
+            ("数据集", self.file),
+            ("权重头文件", self.output),
+        ]
         for row, (label, widget) in enumerate(controls):
             row += 1
-            grid.addWidget(BodyLabel(label, card), row, 0); grid.addWidget(widget, row, 1)
+            grid.addWidget(BodyLabel(label, card), row, 0)
+            grid.addWidget(widget, row, 1)
         grid.addWidget(self.refresh, 1, 2); grid.addWidget(self.browse, 4, 2)
+        grid.addWidget(self.browse_output, 8, 2)
         self.layout.addWidget(card)
 
-        actionCard = CardWidget(root); actionCard.setObjectName("AdpActionCard")
-        actions = QHBoxLayout(actionCard); actions.setContentsMargins(20, 16, 20, 16); actions.setSpacing(10)
+        actionCard = CardWidget(root)
+        actionCard.setObjectName("AdpActionCard")
+        actions = QHBoxLayout(actionCard)
+        actions.setContentsMargins(20, 16, 20, 16)
+        actions.setSpacing(10)
         actions.addWidget(StrongBodyLabel("工作流", actionCard))
         self.start = PrimaryPushButton("开始采集", root); self.start.clicked.connect(self.start_capture)
         self.stop = PushButton("停止并保存", root); self.stop.clicked.connect(self.stop_capture); self.stop.setEnabled(False)
         self.train = PushButton("训练模型", root); self.train.clicked.connect(self.run_training)
         actions.addWidget(self.start); actions.addWidget(self.stop); actions.addWidget(self.train); actions.addStretch()
         self.layout.addWidget(actionCard)
-        monitorCard = CardWidget(root); monitorCard.setObjectName("AdpMonitorCard")
-        monitorLayout = QVBoxLayout(monitorCard); monitorLayout.setContentsMargins(20, 18, 20, 20)
+        monitorCard = CardWidget(root)
+        monitorCard.setObjectName("AdpMonitorCard")
+        monitorLayout = QVBoxLayout(monitorCard)
+        monitorLayout.setContentsMargins(20, 18, 20, 20)
         monitorLayout.addWidget(StrongBodyLabel("运行状态", monitorCard))
         self.status = BodyLabel("未采集", monitorCard); monitorLayout.addWidget(self.status)
         self.log = TextEdit(monitorCard); self.log.setReadOnly(True); self.log.setPlaceholderText("训练进程输出与串口状态…")
@@ -81,9 +125,32 @@ class AdpTrainingPage(ScrollArea):
         StyleSheet.ADP_TRAINING_PAGE.apply(self)
         CTX.cfg.themeChanged.connect(self._onThemeChanged)
 
-        self._port = None; self._parser = Uf4FrameParser(); self._rows = []
-        self._step = 0; self._timer = QTimer(self); self._timer.setInterval(5); self._timer.timeout.connect(self.poll)
+        self._port = None
+        self._parser = Uf4FrameParser()
+        self._rows = []
+        self._step = 0
+        self._process = None
+        self._timer = QTimer(self)
+        self._timer.setInterval(5)
+        self._timer.timeout.connect(self.poll)
         self.refresh_ports()
+
+    def _default_dataset_path(self) -> Path:
+        path = CTX.dirs.base_dir / "data" / "adp" / "adp_forward_capture.csv"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def _default_output_path(self) -> Path:
+        firmware = (
+            CTX.dirs.base_dir.parent
+            / "STM32G474RBT6"
+            / "USER"
+            / "ADP_Scheduler"
+            / "adp_outer_weights.h"
+        )
+        if firmware.parent.exists():
+            return firmware
+        return CTX.dirs.base_dir / "data" / "adp" / "adp_outer_weights.h"
 
     def refresh_ports(self):
         current = self.port.currentText(); self.port.clear()
@@ -97,6 +164,16 @@ class AdpTrainingPage(ScrollArea):
     def choose_file(self):
         path, _ = QFileDialog.getSaveFileName(self, "保存训练数据", self.file.text(), "CSV (*.csv)")
         if path: self.file.setText(path)
+
+    def choose_output(self):
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "导出 ADP 权重头文件",
+            self.output.text(),
+            "C Header (*.h)",
+        )
+        if path:
+            self.output.setText(path)
 
     def start_capture(self):
         if serial is None:
@@ -146,7 +223,9 @@ class AdpTrainingPage(ScrollArea):
         self._timer.stop(); self._close_port(); self.start.setEnabled(True); self.stop.setEnabled(False)
         self.connectionPill.setText("未连接"); self.connectionPill.setTone(ChipTone.DANGER)
         if self._rows:
-            with open(self.file.text(), "w", newline="", encoding="utf-8") as handle:
+            dataset = Path(self.file.text())
+            dataset.parent.mkdir(parents=True, exist_ok=True)
+            with dataset.open("w", newline="", encoding="utf-8") as handle:
                 writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS); writer.writeheader(); writer.writerows(self._rows)
         self.status.setText(f"已保存 {len(self._rows)} samples: {self.file.text()}")
 
@@ -161,23 +240,71 @@ class AdpTrainingPage(ScrollArea):
     def run_training(self):
         if self._port: self.stop_capture()
         dataset = Path(self.file.text())
-        if not dataset.exists(): self.status.setText("请先采集并保存 CSV"); return
-        script = Path(__file__).parents[4] / "STM32G474RBT6" / "tools" / "adp_offline_train.py"
-        output = dataset.with_name("adp_outer_weights.h")
-        args = [str(script), "--dataset", str(dataset), "--ilimit", self.ilimit.text(), "--output", str(output)]
+        script = Path(__file__).parents[2] / "tools" / "adp_offline_train.py"
+        output = Path(self.output.text())
+        report = output.with_suffix(".json")
+        if not dataset.exists():
+            self.status.setText("请先采集或选择 CSV 数据集")
+            return
+        if not getattr(sys, "frozen", False) and not script.exists():
+            self.status.setText(f"训练器不存在: {script}")
+            return
+        try:
+            ilimit = float(self.ilimit.text())
+            epochs = int(self.epochs.text())
+            validation = float(self.validation.text())
+            seed = int(self.seed.text())
+            if ilimit <= 0 or epochs < 1 or not 0 < validation < 0.5:
+                raise ValueError
+        except ValueError:
+            self.status.setText("训练参数无效，请检查 Ilimit、Epoch、验证比例和 Seed")
+            return
+        output.parent.mkdir(parents=True, exist_ok=True)
+        args = [
+            "--dataset", str(dataset),
+            "--ilimit", str(ilimit),
+            "--epochs", str(epochs),
+            "--validation-ratio", str(validation),
+            "--seed", str(seed),
+            "--output", str(output),
+            "--report", str(report),
+        ]
+        if getattr(sys, "frozen", False):
+            program = sys.executable
+            args.insert(0, "--adp-train")
+            workdir = CTX.dirs.base_dir
+        else:
+            program = sys.executable
+            args.insert(0, str(script))
+            workdir = script.parent.parent
         self.log.append("启动训练: " + " ".join(args))
-        self._process = QProcess(self); self._process.setProgram(sys.executable); self._process.setArguments(args)
-        self._process.readyReadStandardOutput.connect(lambda: self.log.append(bytes(self._process.readAllStandardOutput()).decode(errors="replace")))
-        self._process.readyReadStandardError.connect(lambda: self.log.append(bytes(self._process.readAllStandardError()).decode(errors="replace")))
+        self._process = QProcess(self)
+        self._process.setWorkingDirectory(str(workdir))
+        self._process.setProgram(program)
+        self._process.setArguments(args)
+        self._process.readyReadStandardOutput.connect(
+            lambda: self.log.append(
+                bytes(self._process.readAllStandardOutput()).decode(errors="replace").rstrip()
+            )
+        )
+        self._process.readyReadStandardError.connect(
+            lambda: self.log.append(
+                bytes(self._process.readAllStandardError()).decode(errors="replace").rstrip()
+            )
+        )
         self._process.finished.connect(
             lambda code, status: self._training_finished(code, output)
         )
+        self.train.setEnabled(False)
+        self.status.setText("训练中...")
         self._process.start()
 
     def _training_finished(self, exit_code, output):
+        self.train.setEnabled(True)
         if int(exit_code) == 0:
             self.status.setText(f"训练完成: {output}")
             self.log.append(f"训练成功，权重已生成: {output}")
+            self.log.append(f"评估报告: {output.with_suffix('.json')}")
         else:
             self.status.setText(f"训练失败，退出码 {exit_code}")
             self.log.append(f"训练失败，退出码: {exit_code}")

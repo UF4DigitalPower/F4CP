@@ -72,7 +72,8 @@ packages = [
     "app.widgets.icon",
     "app.widgets.pages",
 
-    "config"
+    "config",
+    "tools",
 ]
 include_files = [
     ["Resources/assets", "Resources/assets"],
