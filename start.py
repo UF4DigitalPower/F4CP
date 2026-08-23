@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import QApplication
 from config import get_logger,cfg
 from app.manager import loadSavedFont
 
-logger = get_logger("Bootstrap")
+logger = get_logger("StartBoot")
 
 from app.window import Window
 
