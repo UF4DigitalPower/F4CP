@@ -65,6 +65,7 @@ packages = [
     "app.session.page_daplink",
     "app.session.page_device",
     "app.session.page_power",
+    "app.session.page_adp_training",
     "app.widgets",
     "app.window",
 

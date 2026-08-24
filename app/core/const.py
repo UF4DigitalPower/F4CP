@@ -40,8 +40,8 @@ class PowerDataMeta:
 
 
 POWER_DATA_META = {
-    PowerDataType.SET_VOLTAGE_LIMIT: PowerDataMeta(PowerDataType.SET_VOLTAGE_LIMIT, "mV", "Set Voltage Limit"),
-    PowerDataType.SET_CURRENT_LIMIT: PowerDataMeta(PowerDataType.SET_CURRENT_LIMIT, "mA", "Set Current Limit"),
+    PowerDataType.SET_VOLTAGE_LIMIT: PowerDataMeta(PowerDataType.SET_VOLTAGE_LIMIT, "0.01 V", "Set Voltage Limit"),
+    PowerDataType.SET_CURRENT_LIMIT: PowerDataMeta(PowerDataType.SET_CURRENT_LIMIT, "0.01 A", "Set Current Limit"),
     PowerDataType.POWER_STATE: PowerDataMeta(PowerDataType.POWER_STATE, "bool", "Power State"),
     PowerDataType.FAULT_STATE: PowerDataMeta(PowerDataType.FAULT_STATE, "bitmask", "Fault State"),
 }

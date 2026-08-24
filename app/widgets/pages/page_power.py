@@ -44,7 +44,7 @@ from config import CTX, get_logger
 logger = get_logger("PowerPage")
 
 
-DEFAULT_OVP_SET_VALUE_MV = 44000
+DEFAULT_OVP_SET_VALUE_CENTI_V = 4400
 POWER_POLL_INTERVAL_MS = 500
 POWER_SERIAL_BAUD_RATE = 921600
 WRITE_POLL_RESTART_DELAY_MS = 600
@@ -183,11 +183,11 @@ class ParameterEditor(CardWidget):
         self.setObjectName("PowerParameterEditor")
         self.titleLabel = SubtitleLabel(title, self)
         self._selectorBlocks: list[tuple[QWidget, CaptionLabel]] = []
-        self.outputVoltage = self._createDoubleSelector("V", 0.0, 80.0, 0.1)
-        self.outputCurrent = self._createDoubleSelector("A", 0.0, 60.0, 0.1)
-        self.ovp = self._createDoubleSelector("V", 0.0, 100.0, 0.1)
-        self.ocp = self._createDoubleSelector("A", 0.0, 80.0, 0.1)
-        self.otp = self._createDoubleSelector("°C", 0.0, 150.0, 1.0)
+        self.outputVoltage = self._createDoubleSelector("V", 0.0, 80.0, 0.01)
+        self.outputCurrent = self._createDoubleSelector("A", 0.0, 60.0, 0.01)
+        self.ovp = self._createDoubleSelector("V", 0.0, 100.0, 0.01)
+        self.ocp = self._createDoubleSelector("A", 0.0, 80.0, 0.01)
+        self.otp = self._createDoubleSelector("°C", 0.0, 150.0, 0.01)
         self.fan = self._createFanSelector()
         for editor in (self.ovp, self.ocp, self.otp, self.fan):
             editor.setVisible(False)
@@ -308,8 +308,8 @@ class ParameterEditor(CardWidget):
 
     def setFromStatus(self, status: PowerStatus) -> None:
         values = {
-            self.outputVoltage: status.set_voltage_limit_mv / 1000.0,
-            self.outputCurrent: status.set_current_limit_ma / 1000.0,
+            self.outputVoltage: status.set_voltage_limit_mv / 100.0,
+            self.outputCurrent: status.set_current_limit_ma / 100.0,
             self.ovp: status.ovp_set_value_v,
             self.ocp: status.ocp_set_value_a,
             self.otp: status.otp_set_value_c,
@@ -748,8 +748,8 @@ class PowerPage(ScrollArea):
         self.metricCards["vin"].setMetric(_MetricValue("输入电压", f"{status.vin_v:.3f}", "V", f"输入功率 {status.pin_w:.2f} W"))
         self.metricCards["iin"].setMetric(_MetricValue("输入电流", f"{status.iin_a:.3f}", "A", f"模式 {status.mode_name}"))
         self.metricCards["pin"].setMetric(_MetricValue("输入功率", f"{status.pin_w:.3f}", "W", f"故障 0x{status.fault_state:04X}"))
-        self.metricCards["vout"].setMetric(_MetricValue("输出电压", f"{status.vout_v:.3f}", "V", f"设定 {status.set_voltage_limit_mv / 1000.0:.3f} V"))
-        self.metricCards["iout"].setMetric(_MetricValue("输出电流", f"{status.iout_a:.3f}", "A", f"设定 {status.set_current_limit_ma / 1000.0:.3f} A"))
+        self.metricCards["vout"].setMetric(_MetricValue("输出电压", f"{status.vout_v:.3f}", "V", f"设定 {status.set_voltage_limit_mv / 100.0:.3f} V"))
+        self.metricCards["iout"].setMetric(_MetricValue("输出电流", f"{status.iout_a:.3f}", "A", f"设定 {status.set_current_limit_ma / 100.0:.3f} A"))
         self.metricCards["pout"].setMetric(_MetricValue("输出功率", f"{status.pout_w:.3f}", "W", f"效率 {status.efficiency:.2f} %"))
         self._syncPendingParameterWrites(status)
         self.parameterEditor.setFromStatus(status)
@@ -820,7 +820,7 @@ class PowerPage(ScrollArea):
         self.powerStateRequested.emit(checked)
 
     def _applyOutputLimits(self) -> None:
-        """提交输出限制值；界面用 V/A，协议层用 mV/mA。"""
+        """提交输出限制值；界面用 V/A，协议层用0.01 V/0.01 A。"""
         if not self._client.is_connected:
             self._appendLog("错误: 串口会话未连接")
             return
@@ -829,8 +829,8 @@ class PowerPage(ScrollArea):
         if self._client.is_busy:
             self._appendLog("协议请求进行中，请稍后再写入")
             return
-        voltage_mv = int(round(self.parameterEditor.outputVoltage.value() * 1000))
-        current_ma = int(round(self.parameterEditor.outputCurrent.value() * 1000))
+        voltage_mv = int(round(self.parameterEditor.outputVoltage.value() * 100))
+        current_ma = int(round(self.parameterEditor.outputCurrent.value() * 100))
         enabled = self._stagedOutputEnabled if self._stagedOutputEnabled is not None else self.parameterEditor.outputSwitch.isChecked()
         self._pendingOutputSettings = (voltage_mv, current_ma)
         self._beginWriteOperation()
@@ -838,7 +838,7 @@ class PowerPage(ScrollArea):
         self.outputLimitsRequested.emit(voltage_mv, current_ma, enabled)
 
     def _applyProtectionValues(self) -> None:
-        """提交保护参数；温度在界面是摄氏度，协议层按毫摄氏度传输。"""
+        """提交保护参数；电压、电流、温度统一按0.01单位传输。"""
         if not self._client.is_connected:
             self._appendLog("错误: 串口会话未连接")
             return
@@ -847,8 +847,8 @@ class PowerPage(ScrollArea):
         if self._client.is_busy:
             self._appendLog("协议请求进行中，请稍后再写入")
             return
-        ovp_mv = int(round(self.parameterEditor.ovp.value() * 1000))
-        ocp_ma = int(round(self.parameterEditor.ocp.value() * 1000))
+        ovp_mv = int(round(self.parameterEditor.ovp.value() * 100))
+        ocp_ma = int(round(self.parameterEditor.ocp.value() * 100))
         otp_mc = int(round(self.parameterEditor.otp.value() * 100))
         fan_value = int(self.parameterEditor.fan.value())
         self._pendingProtectionSettings = (ovp_mv, ocp_ma, otp_mc, fan_value)
@@ -860,8 +860,8 @@ class PowerPage(ScrollArea):
         """读回值确认后再允许状态流刷新刚编辑过的设定框。"""
         if self._pendingOutputSettings is not None:
             voltage_mv, current_ma = self._pendingOutputSettings
-            editor_voltage_mv = int(round(self.parameterEditor.outputVoltage.value() * 1000))
-            editor_current_ma = int(round(self.parameterEditor.outputCurrent.value() * 1000))
+            editor_voltage_mv = int(round(self.parameterEditor.outputVoltage.value() * 100))
+            editor_current_ma = int(round(self.parameterEditor.outputCurrent.value() * 100))
             if (
                 status.set_voltage_limit_mv == voltage_mv
                 and status.set_current_limit_ma == current_ma
@@ -873,8 +873,8 @@ class PowerPage(ScrollArea):
 
         if self._pendingProtectionSettings is not None:
             ovp_mv, ocp_ma, otp_mc, fan_value = self._pendingProtectionSettings
-            editor_ovp_mv = int(round(self.parameterEditor.ovp.value() * 1000))
-            editor_ocp_ma = int(round(self.parameterEditor.ocp.value() * 1000))
+            editor_ovp_mv = int(round(self.parameterEditor.ovp.value() * 100))
+            editor_ocp_ma = int(round(self.parameterEditor.ocp.value() * 100))
             editor_otp_mc = int(round(self.parameterEditor.otp.value() * 100))
             editor_fan_value = int(self.parameterEditor.fan.value())
             if (
@@ -993,7 +993,7 @@ class PowerPage(ScrollArea):
         self.parameterEditor.outputSwitch.setChecked(False)
         self.parameterEditor.outputSwitch.blockSignals(False)
         if self.parameterEditor.ovp.value() <= 0:
-            self.parameterEditor.ovp.setValue(DEFAULT_OVP_SET_VALUE_MV / 1000.0)
+            self.parameterEditor.ovp.setValue(DEFAULT_OVP_SET_VALUE_CENTI_V / 100.0)
 
 
     def _appendLog(self, text: str) -> None:
