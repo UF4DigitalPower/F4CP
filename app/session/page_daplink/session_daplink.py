@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
 
+from config import CTX
 from PyQt5.QtCore import QCoreApplication, QEvent, QObject, QThread, pyqtSignal
 
 # ---------------------------------------------------------------------------
@@ -224,32 +225,9 @@ class DaplinkRequestEvent(QEvent):
 # 工具路径解析
 # ---------------------------------------------------------------------------
 
-DEFAULT_UF4_TARGET_EXE = Path(
-    r"E:\PROJECT_UF4POWER\Upper\DAPLINK\tools\uf4-target\uf4-target.exe"
-)
-
 
 def resolve_uf4_target_exe() -> Path | None:
-    """依次尝试：配置项 > 环境变量 > 内置路径 > 默认仓库路径。"""
-    try:
-        from config import CTX
-
-        configured = (CTX.cfg.daplinkUf4TargetExe.value or "").strip()
-        if configured and Path(configured).is_file():
-            return Path(configured)
-    except Exception:
-        pass
-
-    env_exe = os.environ.get("UF4_TARGET_EXE", "")
-    candidates = [Path(env_exe)] if env_exe else []
-    candidates += [
-        Path(__file__).resolve().parent.parent.parent / "src" / "tools" / "uf4-target" / "uf4-target.exe",
-        DEFAULT_UF4_TARGET_EXE,
-    ]
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    return None
+    return CTX.dirs.Uf4TargetExeDir / "uf4-target.exe" if (CTX.dirs.Uf4TargetExeDir / "uf4-target.exe").is_file() else None
 
 
 # ---------------------------------------------------------------------------

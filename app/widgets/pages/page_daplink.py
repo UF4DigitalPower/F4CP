@@ -389,7 +389,7 @@ class DaplinkPage(ScrollArea):
         grid.addWidget(self.esp32FlashSizeLabel, 2, 0)
         self.esp32FlashSizeCombo = ComboBox(self.esp32Card)
         self.esp32FlashSizeCombo.addItems(["detect", "4MB", "8MB", "16MB", "keep"])
-        self.esp32FlashSizeCombo.setCurrentText("detect")
+        self.esp32FlashSizeCombo.setCurrentText("8MB")
         grid.addWidget(self.esp32FlashSizeCombo, 2, 1)
 
         self.esp32ChipLabel = BodyLabel(self.esp32Card)

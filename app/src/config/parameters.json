@@ -1,0 +1,204 @@
+{
+  "magic": 1430664272,
+  "version": 4,
+  "records": [
+    {
+      "id": 17,
+      "note": "UF4_ID_SET_VOLTAGE_LIMIT",
+      "value": 500,
+      "crc": 22231
+    },
+    {
+      "id": 18,
+      "note": "UF4_ID_SET_CURRENT_LIMIT",
+      "value": 100,
+      "crc": 61422
+    },
+    {
+      "id": 30,
+      "note": "UF4_ID_OTP_SET_VALUE",
+      "value": 12000,
+      "crc": 57033
+    },
+    {
+      "id": 34,
+      "note": "UF4_ID_OCP_SET_VALUE",
+      "value": 1000,
+      "crc": 49042
+    },
+    {
+      "id": 39,
+      "note": "UF4_ID_FAN_SET_VALUE",
+      "value": 1000,
+      "crc": 61905
+    },
+    {
+      "id": 79,
+      "note": "UF4_ID_CFG_POWER_DIRECTION_MODE",
+      "value": 1,
+      "crc": 28188
+    },
+    {
+      "id": 48,
+      "note": "UF4_ID_CFG_VIN_OVP",
+      "value": 7500,
+      "crc": 24924
+    },
+    {
+      "id": 49,
+      "note": "UF4_ID_CFG_VIN_UVP",
+      "value": 500,
+      "crc": 55934
+    },
+    {
+      "id": 50,
+      "note": "UF4_ID_CFG_VOUT_OVP",
+      "value": 7500,
+      "crc": 54399
+    },
+    {
+      "id": 51,
+      "note": "UF4_ID_CFG_ADC_VREF",
+      "value": 330,
+      "crc": 31232
+    },
+    {
+      "id": 52,
+      "note": "UF4_ID_CFG_VIN_R_UPPER",
+      "value": 600,
+      "crc": 10865
+    },
+    {
+      "id": 53,
+      "note": "UF4_ID_CFG_VIN_R_LOWER",
+      "value": 30,
+      "crc": 60785
+    },
+    {
+      "id": 54,
+      "note": "UF4_ID_CFG_VOUT_R_UPPER",
+      "value": 600,
+      "crc": 59380
+    },
+    {
+      "id": 55,
+      "note": "UF4_ID_CFG_VOUT_R_LOWER",
+      "value": 30,
+      "crc": 51944
+    },
+    {
+      "id": 56,
+      "note": "UF4_ID_CFG_SHUNT_IN",
+      "value": 800,
+      "crc": 47222
+    },
+    {
+      "id": 57,
+      "note": "UF4_ID_CFG_SHUNT_OUT",
+      "value": 800,
+      "crc": 4647
+    },
+    {
+      "id": 58,
+      "note": "UF4_ID_CFG_GAIN_IN",
+      "value": 100,
+      "crc": 59727
+    },
+    {
+      "id": 59,
+      "note": "UF4_ID_CFG_GAIN_OUT",
+      "value": 100,
+      "crc": 17182
+    },
+    {
+      "id": 60,
+      "note": "UF4_ID_CFG_CURRENT_OFFSET",
+      "value": 0,
+      "crc": 38424
+    },
+    {
+      "id": 61,
+      "note": "UF4_ID_CFG_VIN_GAIN",
+      "value": 100,
+      "crc": 36819
+    },
+    {
+      "id": 62,
+      "note": "UF4_ID_CFG_VIN_OFFSET",
+      "value": 0,
+      "crc": 63608
+    },
+    {
+      "id": 63,
+      "note": "UF4_ID_CFG_VOUT_GAIN",
+      "value": 100,
+      "crc": 52048
+    },
+    {
+      "id": 64,
+      "note": "UF4_ID_CFG_VOUT_OFFSET",
+      "value": 0,
+      "crc": 19160
+    },
+    {
+      "id": 65,
+      "note": "UF4_ID_CFG_IIN_GAIN",
+      "value": 100,
+      "crc": 1749
+    },
+    {
+      "id": 66,
+      "note": "UF4_ID_CFG_IIN_OFFSET",
+      "value": 0,
+      "crc": 9400
+    },
+    {
+      "id": 67,
+      "note": "UF4_ID_CFG_IOUT_GAIN",
+      "value": 100,
+      "crc": 16982
+    },
+    {
+      "id": 68,
+      "note": "UF4_ID_CFG_IOUT_OFFSET",
+      "value": 0,
+      "crc": 16313
+    },
+    {
+      "id": 69,
+      "note": "UF4_ID_CFG_VOLTAGE_KP",
+      "value": 0,
+      "crc": 2185
+    },
+    {
+      "id": 70,
+      "note": "UF4_ID_CFG_VOLTAGE_KI",
+      "value": 0,
+      "crc": 57516
+    },
+    {
+      "id": 71,
+      "note": "UF4_ID_CFG_VOLTAGE_KD",
+      "value": 0,
+      "crc": 55196
+    },
+    {
+      "id": 72,
+      "note": "UF4_ID_CFG_CURRENT_KP",
+      "value": 0,
+      "crc": 36556
+    },
+    {
+      "id": 73,
+      "note": "UF4_ID_CFG_CURRENT_KI",
+      "value": 0,
+      "crc": 47612
+    },
+    {
+      "id": 74,
+      "note": "UF4_ID_CFG_CURRENT_KD",
+      "value": 0,
+      "crc": 15468
+    }
+  ]
+}

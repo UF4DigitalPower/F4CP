@@ -132,6 +132,10 @@ class DirPaths:
     def ConfigJsonPath(self) -> Path:
         return self.ConfigDir / "config.json"
 
+    @cached_property
+    def Uf4TargetExeDir(self) -> Path:
+        return self.ToolsDir / "uf4-target"
+
 
 # ============================================================================
 #  Logger factory
