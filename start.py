@@ -13,12 +13,6 @@
 
 import sys
 
-if "--adp-train" in sys.argv:
-    from tools.adp_offline_train import main as adp_train_main
-
-    sys.argv.remove("--adp-train")
-    raise SystemExit(adp_train_main())
-
 from PyQt5.QtGui import QCloseEvent
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication

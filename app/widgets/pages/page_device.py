@@ -64,6 +64,8 @@ from app.session.page_device.other_device import listSerialPorts
 from app.session.page_device.session_device import (
     ErrorEvent,
     PowerBluetoothSession,
+    TcpConfig,
+    TcpSession,
     RxEvent,
     SerialConfig,
     SerialEventType,
@@ -221,7 +223,7 @@ class DevicePage(ScrollArea):
 
         self.connectionTypeLabel = BodyLabel("连接方式", self.connectionCard)
         self.connectionTypeCombo = ComboBox(self.connectionCard)
-        self.connectionTypeCombo.addItems(["串口", "蓝牙"])
+        self.connectionTypeCombo.addItems(["串口", "蓝牙", "Wi-Fi TCP"])
 
         self.portLabel = BodyLabel("串口", self.connectionCard)
         self.portCombo = ComboBox(self.connectionCard)
@@ -231,10 +233,17 @@ class DevicePage(ScrollArea):
         self.bluetoothCombo = ComboBox(self.connectionCard)
         self.bluetoothCombo.setMinimumWidth(220)
 
+        self.tcpHostLabel = BodyLabel("ESP32 IP", self.connectionCard)
+        self.tcpHostInput = LineEdit(self.connectionCard)
+        self.tcpHostInput.setPlaceholderText("例如 192.168.137.42")
+        self.tcpPortLabel = BodyLabel("TCP 端口", self.connectionCard)
+        self.tcpPortInput = LineEdit(self.connectionCard)
+        self.tcpPortInput.setText("4884")
+
         self.baudLabel = BodyLabel("波特率", self.connectionCard)
         self.baudCombo = ComboBox(self.connectionCard)
         self.baudCombo.addItems(list(SESSION_PAGE_BAUD_RATES))
-        self.baudCombo.setCurrentText("921600")
+        self.baudCombo.setCurrentText("115200")
 
         self.parseLabel = BodyLabel("解析", self.connectionCard)
         self.parseSwitch = SwitchButton(self.connectionCard)
@@ -252,6 +261,10 @@ class DevicePage(ScrollArea):
         grid.addWidget(self.portCombo, 1, 1)
         grid.addWidget(self.bluetoothLabel, 1, 0)
         grid.addWidget(self.bluetoothCombo, 1, 1)
+        grid.addWidget(self.tcpHostLabel, 1, 0)
+        grid.addWidget(self.tcpHostInput, 1, 1)
+        grid.addWidget(self.tcpPortLabel, 1, 2)
+        grid.addWidget(self.tcpPortInput, 1, 3)
         grid.addWidget(self.parseLabel, 1, 2)
         grid.addWidget(self.parseSwitch, 1, 3)
         grid.addWidget(self.stateLabel, 2, 0, 1, 2)
@@ -771,6 +784,8 @@ class DevicePage(ScrollArea):
         """根据当前连接类型刷新串口或蓝牙目标列表。"""
         if self._isBluetoothMode():
             self.refreshBluetoothDevices()
+        elif self._isTcpMode():
+            self._appendLog("Wi-Fi TCP：请填写 ESP32 配网页面显示的 IP，端口固定为 4884。")
         else:
             self.refreshPorts()
 
@@ -811,15 +826,23 @@ class DevicePage(ScrollArea):
     def _isBluetoothMode(self) -> bool:
         return self.connectionTypeCombo.currentText().strip() == "蓝牙"
 
+    def _isTcpMode(self) -> bool:
+        return self.connectionTypeCombo.currentText().strip() == "Wi-Fi TCP"
+
     def _onConnectionTypeChanged(self, text: str):
         isBluetooth = text.strip() == "蓝牙"
-        self.portLabel.setVisible(not isBluetooth)
-        self.portCombo.setVisible(not isBluetooth)
-        self.baudLabel.setVisible(not isBluetooth)
-        self.baudCombo.setVisible(not isBluetooth)
+        isTcp = text.strip() == "Wi-Fi TCP"
+        self.portLabel.setVisible(not isBluetooth and not isTcp)
+        self.portCombo.setVisible(not isBluetooth and not isTcp)
+        self.baudLabel.setVisible(not isBluetooth and not isTcp)
+        self.baudCombo.setVisible(not isBluetooth and not isTcp)
         self.bluetoothLabel.setVisible(isBluetooth)
         self.bluetoothCombo.setVisible(isBluetooth)
-        self.refreshButton.setText("扫描蓝牙" if isBluetooth else "刷新串口")
+        self.tcpHostLabel.setVisible(isTcp)
+        self.tcpHostInput.setVisible(isTcp)
+        self.tcpPortLabel.setVisible(isTcp)
+        self.tcpPortInput.setVisible(isTcp)
+        self.refreshButton.setText("扫描蓝牙" if isBluetooth else ("连接说明" if isTcp else "刷新串口"))
 
     def toggleConnection(self):
         """连接按钮入口：已连接则断开，未连接则按当前模式发起连接。"""
@@ -831,6 +854,8 @@ class DevicePage(ScrollArea):
     def _connect(self):
         if self._isBluetoothMode():
             self._connectBluetooth()
+        elif self._isTcpMode():
+            self._connectTcp()
         else:
             self._connectSerial()
 
@@ -882,6 +907,28 @@ class DevicePage(ScrollArea):
         try:
             self._session.open()
             self._appendLog(f"正在连接蓝牙设备: {target}")
+        except Exception as exc:
+            self._onError(str(exc))
+            self._session = None
+            self._resetUf4comProtocol()
+
+    def _connectTcp(self):
+        host = self.tcpHostInput.text().strip()
+        try:
+            port = int(self.tcpPortInput.text().strip() or "4884")
+            if not 1 <= port <= 65535:
+                raise ValueError
+        except ValueError:
+            self._appendLog("错误: TCP 端口必须是 1 到 65535。")
+            return
+        if not host:
+            self._appendLog("错误: 请填写 ESP32 配网页面显示的 IP 地址。")
+            return
+        self._session = TcpSession(TcpConfig(host=host, port=port), _event_receiver=self, parent=self)
+        self._initUf4comProtocol()
+        try:
+            self._session.open()
+            self._appendLog(f"正在连接 Wi-Fi TCP: {host}:{port}")
         except Exception as exc:
             self._onError(str(exc))
             self._session = None

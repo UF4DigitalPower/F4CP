@@ -5,8 +5,8 @@ from __future__ import annotations
 def listSerialPorts() -> list[str]:
     """Return currently available serial device names.
 
-    Keep enumeration in one place so Device, Power and ADP training pages use
-    the same pyserial view of the host.  Descriptions are deliberately not
+    Keep enumeration in one place so Device and Power pages use the same
+    pyserial view of the host. Descriptions are deliberately not
     returned: localized driver descriptions can contain broken text and are
     not valid values for ``serial.Serial``.
     """

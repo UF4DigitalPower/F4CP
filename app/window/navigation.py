@@ -16,7 +16,6 @@ from app.widgets.pages import (
     PowerPage,
     SettingsPage,
     VersionPage,
-    AdpTrainingPage,
 )
 
 
@@ -34,7 +33,6 @@ NAVIGATION_ENTRIES = (
     NavigationEntry("homeNavItem"   ,  "homeInterface"   , UF4Icon.GAUGE, "引导", UF4Icon.GAUGE_FILL),
     NavigationEntry("deviceNavItem" ,  "deviceInterface" , UF4Icon.SERIAL_PORT, "串口", UF4Icon.SERIAL_PORT_FILL),
     NavigationEntry("powerNavItem"  ,  "powerInterface"  , UF4Icon.DEVELOPER_BOARD, "设备", UF4Icon.DEVELOPER_BOARD_FILL),
-    NavigationEntry("adpTrainingNavItem", "adpTrainingInterface", UF4Icon.BRAIN_CIRCUIT, "ADP训练", UF4Icon.BRAIN_CIRCUIT),
     NavigationEntry("paramsNavItem" ,  "paramsInterface" , UF4Icon.WRENCH, "参数", UF4Icon.WRENCH_FILL),
     NavigationEntry("daplinkNavItem",  "daplinkInterface", UF4Icon.FLASH_SETTINGS, "烧录", UF4Icon.FLASH_SETTINGS_FILL),
     NavigationEntry("versionNavItem",  "versionInterface", UF4Icon.CLOUD_ARROW_DOWN, "版本", UF4Icon.CLOUD_ARROW_DOWN_FILL),
@@ -52,13 +50,11 @@ class NavigationMixin:
     daplinkInterface: DaplinkPage
     versionInterface: VersionPage
     settingInterface: SettingsPage
-    adpTrainingInterface: AdpTrainingPage
 
     def createPages(self) -> None:
         self.homeInterface = HomePage(self)
         self.deviceInterface = DevicePage(self)
         self.powerInterface = PowerPage(self)
-        self.adpTrainingInterface = AdpTrainingPage(self)
         self.paramsInterface = ParametersPage(self)
         self.daplinkInterface = DaplinkPage(self)
         self.versionInterface = VersionPage(self)

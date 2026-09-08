@@ -50,11 +50,7 @@ class DirPaths:
     def __init__(self, base_dir: Path | None = None):
         self._base = base_dir if base_dir is not None else _detect_base_dir()
 
-    @property
-    def base_dir(self) -> Path:
-        return self._base
-
-    @property
+    @cached_property
     def BaseDir(self) -> Path:
         """Backward-compatible alias for base_dir."""
         return self._base

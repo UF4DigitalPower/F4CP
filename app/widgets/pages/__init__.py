@@ -19,4 +19,3 @@ from .page_parameters import *
 from .page_settings import *
 from .page_battery import *
 from .page_version import *
-from .page_adp_training import *
