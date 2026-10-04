@@ -56,6 +56,7 @@ class NavigationMixin:
         self.deviceInterface = DevicePage(self)
         self.powerInterface = PowerPage(self)
         self.paramsInterface = ParametersPage(self)
+        self.paramsInterface.bindPowerClient(self.powerInterface._client)
         self.daplinkInterface = DaplinkPage(self)
         self.versionInterface = VersionPage(self)
         self.settingInterface = SettingsPage(self)

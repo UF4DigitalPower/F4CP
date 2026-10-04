@@ -26,4 +26,5 @@ def listSerialPorts() -> list[str]:
 
 
 def pretty_faults(fault_state: int) -> str:
-    return "无故障" if not fault_state else f"0x{fault_state:04X}"
+    names = ("无故障", "自检失败", "过压", "过流", "ADC 故障", "PWM 故障", "通信超时", "外部保护", "过温")
+    return names[fault_state] if 0 <= fault_state < len(names) else f"未知故障 0x{fault_state:04X}"

@@ -77,9 +77,11 @@ from app.session.page_device.session_device import (
 from app.core.const import POWER_DATA_META, PowerCommand, PowerDataType, PowerFrameFlag
 from app.protocol.uf4com import (
     Uf4Command,
+    Uf4Flag,
     Uf4FrameParser,
     build_frame,
     encode_tv,
+    is_request_cmd,
     iter_tv_items,
 )
 from config import CTX, get_logger
@@ -1019,7 +1021,7 @@ class DevicePage(ScrollArea):
         total = 0
         for _ in range(repeat):
             self._uf4comSeq = (self._uf4comSeq + 1) % 256
-            frame = build_frame(cmd, self._uf4comSeq, payload)
+            frame = build_frame(cmd, self._uf4comSeq, payload, Uf4Flag.ACK_REQ if is_request_cmd(cmd) else 0)
             self._safeWrite(frame)
             total += len(frame)
             seqs.append(self._uf4comSeq)

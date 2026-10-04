@@ -46,7 +46,7 @@ logger = get_logger("PowerPage")
 
 DEFAULT_OVP_SET_VALUE_CENTI_V = 4400
 POWER_POLL_INTERVAL_MS = 500
-POWER_SERIAL_BAUD_RATE = 921600
+POWER_SERIAL_BAUD_RATE = 115200
 WRITE_POLL_RESTART_DELAY_MS = 600
 WRITE_WATCHDOG_TIMEOUT_MS = 6500
 
@@ -183,11 +183,11 @@ class ParameterEditor(CardWidget):
         self.setObjectName("PowerParameterEditor")
         self.titleLabel = SubtitleLabel(title, self)
         self._selectorBlocks: list[tuple[QWidget, CaptionLabel]] = []
-        self.outputVoltage = self._createDoubleSelector("V", 0.0, 80.0, 0.01)
-        self.outputCurrent = self._createDoubleSelector("A", 0.0, 60.0, 0.01)
-        self.ovp = self._createDoubleSelector("V", 0.0, 100.0, 0.01)
-        self.ocp = self._createDoubleSelector("A", 0.0, 80.0, 0.01)
-        self.otp = self._createDoubleSelector("°C", 0.0, 150.0, 0.01)
+        self.outputVoltage = self._createDoubleSelector("V", 0.0, 70.0, 0.01)
+        self.outputCurrent = self._createDoubleSelector("A", 0.0, 10.0, 0.01)
+        self.ovp = self._createDoubleSelector("V", 0.01, 70.0, 0.01)
+        self.ocp = self._createDoubleSelector("A", 0.01, 10.0, 0.01)
+        self.otp = self._createDoubleSelector("°C", 40.0, 150.0, 0.01)
         self.fan = self._createFanSelector()
         for editor in (self.ovp, self.ocp, self.otp, self.fan):
             editor.setVisible(False)
@@ -213,11 +213,14 @@ class ParameterEditor(CardWidget):
         self.outputSwitch.setOnText("输出开启")
         self.outputSwitch.setOffText("输出关闭")
         self.applyOutputButton = PrimaryPushButton(FIF.ACCEPT, "应用输出", self)
+        self.clearFaultButton = PushButton(FIF.SYNC, "清除故障", self)
         self.applyProtectButton = PushButton(FIF.SAVE, "应用保护", self)
         self.outputSwitch.setFixedHeight(32)
         self.applyOutputButton.setFixedHeight(32)
+        self.clearFaultButton.setFixedHeight(32)
         self.applyProtectButton.setFixedHeight(32)
         self.applyOutputButton.setMinimumWidth(96)
+        self.clearFaultButton.setMinimumWidth(96)
         self.applyProtectButton.setMinimumWidth(96)
         self.applyProtectButton.setVisible(False)
         self._sectionLabels = [
@@ -238,6 +241,7 @@ class ParameterEditor(CardWidget):
         control.setSpacing(10)
         control.addWidget(self.outputSwitch)
         control.addStretch(1)
+        control.addWidget(self.clearFaultButton)
         control.addWidget(self.applyOutputButton)
 
         layout = QVBoxLayout(self)
@@ -352,6 +356,7 @@ class ParameterEditor(CardWidget):
         for editor in self._editors:
             editor.setEnabled(enabled)
         self.outputSwitch.setEnabled(enabled)
+        self.clearFaultButton.setEnabled(enabled)
         self.applyOutputButton.setEnabled(enabled)
         self.applyProtectButton.setEnabled(enabled)
 
@@ -424,6 +429,7 @@ class PowerPage(ScrollArea):
     outputLimitsRequested = pyqtSignal(int, int, bool)
     protectionValuesRequested = pyqtSignal(int, int, int, int)
     powerStateRequested = pyqtSignal(bool)
+    clearFaultRequested = pyqtSignal()
     startPollingRequested = pyqtSignal(int)
     stopPollingRequested = pyqtSignal()
 
@@ -573,7 +579,7 @@ class PowerPage(ScrollArea):
             "fault": StatusValueWidget("故障", self.statusCard),
             "core_temp": StatusValueWidget("通道温度1", self.statusCard),
             "board_temp": StatusValueWidget("通道温度2", self.statusCard),
-            "pwm": StatusValueWidget("PWM A/D", self.statusCard),
+            "pwm": StatusValueWidget("占空比", self.statusCard),
             "fan": StatusValueWidget("风扇", self.statusCard),
         }
         for index, key in enumerate((
@@ -775,7 +781,7 @@ class PowerPage(ScrollArea):
         self.statusFields["fault"].setValue(faults)
         self.statusFields["core_temp"].setValue(f"{status.core_temp_c:.2f} °C")
         self.statusFields["board_temp"].setValue(f"{status.board_temp_c:.2f} °C")
-        self.statusFields["pwm"].setValue(f"{status.pwm_a_compare} / {status.pwm_d_compare}")
+        self.statusFields["pwm"].setValue(f"{status.duty_permille / 10.0:.1f}%")
         self.statusFields["fan"].setValue(f"{status.fan_speed} / 设定 {status.fan_set_value}")
         if log_changes and (
             previous is None
@@ -818,6 +824,18 @@ class PowerPage(ScrollArea):
         self._writePollingRestartPending = True
         self._appendLog(f"输出开关正在设置为{'开启' if checked else '关闭'}")
         self.powerStateRequested.emit(checked)
+
+    def _clearFault(self) -> None:
+        if not self._client.is_connected:
+            self._appendLog("错误: 串口会话未连接")
+            return
+        if self._isWriteBlocked() or self._client.is_busy:
+            self._appendLog("协议请求进行中，请稍后再清除故障")
+            return
+        self._beginWriteOperation()
+        self._writePollingRestartPending = True
+        self._appendLog("正在请求清除锁存故障")
+        self.clearFaultRequested.emit()
 
     def _applyOutputLimits(self) -> None:
         """提交输出限制值；界面用 V/A，协议层用0.01 V/0.01 A。"""
@@ -939,6 +957,13 @@ class PowerPage(ScrollArea):
         self._appendLog(f"输出已设置为{'开启' if enabled else '关闭'}")
         self._scheduleAutoPollingRestartAfterWrite()
 
+    def _onFaultClearWritten(self) -> None:
+        self._setWriteControlsEnabled(True)
+        self._stagedOutputEnabled = False
+        self._appendLog("故障清除命令已确认，输出保持关闭")
+        showMessage(self, "故障清除", "G474 已接收故障清除命令。", level="success")
+        self._scheduleAutoPollingRestartAfterWrite()
+
     def _onWriteTransactionFinished(self) -> None:
         if self._writeInFlight:
             self._setWriteControlsEnabled(True)
@@ -948,7 +973,8 @@ class PowerPage(ScrollArea):
         self._appendLog(f"错误: {message}")
         logger.error(f"Power client error: {message}")
         self._setWriteControlsEnabled(True)
-        showMessage(self, "通信错误", message, level="error")
+        busy = "DEVICE_BUSY" in message
+        showMessage(self, "设备忙" if busy else "通信错误", message, level="warning" if busy else "error")
         if self._writePollingRestartPending:
             self._scheduleAutoPollingRestartAfterWrite()
 

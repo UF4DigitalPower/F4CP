@@ -9,18 +9,13 @@ from typing import Callable, Iterable
 UF4_SOF1 = 0xAA
 UF4_SOF2 = 0x55
 
-UF4_BROADCAST_ID = 0xFF
-UF4_DEFAULT_MASTER_ID = 0x00
-UF4_DEFAULT_DEVICE_ID = UF4_DEFAULT_MASTER_ID
-
 UF4_MAX_DATA_LEN = 255
-UF4_V4_HEADER_LEN = 8
+UF4_V5_HEADER_LEN = 6
 UF4_CRC_LEN = 2
-UF4_MAX_FRAME_LEN = UF4_V4_HEADER_LEN + UF4_MAX_DATA_LEN + UF4_CRC_LEN
+UF4_MAX_FRAME_LEN = UF4_V5_HEADER_LEN + UF4_MAX_DATA_LEN + UF4_CRC_LEN
 
 UF4_DEFAULT_ACK_TIMEOUT_MS = 50
 UF4_DEFAULT_ACK_RETRIES = 3
-UF4_DEFAULT_ARBITRATION_SLOT_MS = 2
 UF4_MAX_PENDING_REQUESTS = 8
 UF4_TV_SIZE = 3
 
@@ -34,6 +29,8 @@ class Uf4Command(IntEnum):
     STREAM_START_RSP = 0x90
     STREAM_STOP_REQ = 0x11
     STREAM_STOP_RSP = 0x91
+    SAVE_REQ = 0x12
+    SAVE_RSP = 0x92
     STREAM_DATA = 0x15
 
 
@@ -41,7 +38,6 @@ class Uf4Flag(IntEnum):
     ACK_REQ = 0x01
     ACK_FRAME = 0x02
     ERROR = 0x04
-    BROADCAST = 0x08
 
 
 class Uf4DataId(IntEnum):
@@ -54,6 +50,7 @@ class Uf4DataId(IntEnum):
     TEMP2_TEMPERATURE = 0x10
     SET_VOLTAGE_LIMIT = 0x11
     SET_CURRENT_LIMIT = 0x12
+    POWER_DIRECTION = 0x13
     CC_CV_MODE = 0x14
     POWER_STATE = 0x15
     FAULT_STATE = 0x16
@@ -74,9 +71,51 @@ class Uf4DataId(IntEnum):
     PWM_D_COMPARE = 0x25
     FAN_SPEED = 0x26
     FAN_SET_VALUE = 0x27
+    FMAC_SELFTEST_FIRST_RAW = 0x28
     LOOP_CURRENT_FEEDBACK = 0x29
     LOOP_CURRENT_REFERENCE = 0x2A
     VOLTAGE_LOOP_CURRENT_REFERENCE = 0x2B
+    FMAC_SELFTEST_SECOND_RAW = 0x2C
+    FMAC_DIAGNOSTIC_STAGE = 0x2D
+    FMAC_DIAGNOSTIC_STATUS = 0x2E
+    DAC3_CH1_OUTPUT_CODE = 0x2F
+    CFG_VIN_OVP = 0x30
+    CFG_VIN_UVP = 0x31
+    CFG_VOUT_OVP = 0x32
+    CFG_ADC_VREF = 0x33
+    CFG_VIN_R_UPPER = 0x34
+    CFG_VIN_R_LOWER = 0x35
+    CFG_VOUT_R_UPPER = 0x36
+    CFG_VOUT_R_LOWER = 0x37
+    CFG_SHUNT_IN = 0x38
+    CFG_SHUNT_OUT = 0x39
+    CFG_GAIN_IN = 0x3A
+    CFG_GAIN_OUT = 0x3B
+    CFG_CURRENT_OFFSET = 0x3C
+    CFG_VIN_GAIN = 0x3D
+    CFG_VIN_OFFSET = 0x3E
+    CFG_VOUT_GAIN = 0x3F
+    CFG_VOUT_OFFSET = 0x40
+    CFG_IIN_GAIN = 0x41
+    CFG_IIN_OFFSET = 0x42
+    CFG_IOUT_GAIN = 0x43
+    CFG_IOUT_OFFSET = 0x44
+    POWER_CONVERTER_MODE = 0x45
+    CFG_CURRENT_KP = 0x48
+    CFG_CURRENT_KI = 0x49
+    CFG_CURRENT_KD = 0x4A
+    POWER_DIRECTION_STATUS = 0x4B
+    CONTROL_ISR_LAST_CYCLES = 0x4C
+    CONTROL_ISR_MAX_CYCLES = 0x4D
+    CONTROL_ISR_OVERRUN_COUNT = 0x4E
+    CFG_POWER_DIRECTION_MODE = 0x4F
+    OUTPUT_ENABLE = 0x50
+    CFG_VOLTAGE_KP = 0x51
+    CFG_VOLTAGE_KI = 0x52
+    CFG_VOLTAGE_KD = 0x53
+    DAC4_CH1_OUTPUT_CODE = 0x54
+    SELF_CHECK_STATUS = 0x55
+    LATCHED_FAULT_REASON = 0x56
 
 
 class Uf4Error(IntEnum):
@@ -91,13 +130,6 @@ class Uf4Error(IntEnum):
     INTERNAL = 0x0008
     TIMEOUT = 0x0009
     NO_PENDING_SLOT = 0x000A
-    NOT_FOR_THIS_DEVICE = 0x000B
-    ARBITRATION = 0x000C
-
-
-class Uf4Role(IntEnum):
-    MASTER = 0
-    SLAVE = 1
 
 
 class Uf4AckStatus(IntEnum):
@@ -115,21 +147,17 @@ class Uf4IdPermission(IntEnum):
 class Uf4ParserState(IntEnum):
     WAIT_SOF1 = 0
     WAIT_SOF2 = 1
-    WAIT_SRC = 2
-    WAIT_DST = 3
-    WAIT_SEQ = 4
-    WAIT_FLAGS = 5
-    WAIT_CMD = 6
-    WAIT_LEN = 7
-    WAIT_DATA = 8
-    WAIT_CRC_L = 9
-    WAIT_CRC_H = 10
+    WAIT_SEQ = 2
+    WAIT_FLAGS = 3
+    WAIT_CMD = 4
+    WAIT_LEN = 5
+    WAIT_DATA = 6
+    WAIT_CRC_L = 7
+    WAIT_CRC_H = 8
 
 
 @dataclass(frozen=True)
 class Uf4Frame:
-    src: int
-    dst: int
     seq: int
     flags: int
     cmd: int
@@ -147,12 +175,8 @@ class Uf4Frame:
     def is_error(self) -> bool:
         return bool(self.flags & Uf4Flag.ERROR)
 
-    @property
-    def is_broadcast(self) -> bool:
-        return self.dst == UF4_BROADCAST_ID or bool(self.flags & Uf4Flag.BROADCAST)
-
     def to_bytes(self) -> bytes:
-        return build_frame_to(self.src, self.dst, self.seq, self.flags, self.cmd, self.data)
+        return build_frame(self.cmd, self.seq, self.data, self.flags)
 
 
 @dataclass(frozen=True)
@@ -165,11 +189,8 @@ class Uf4TvItem:
 
 @dataclass(frozen=True)
 class Uf4Config:
-    local_id: int = UF4_DEFAULT_DEVICE_ID
-    role: Uf4Role = Uf4Role.MASTER
     ack_timeout_ms: int = UF4_DEFAULT_ACK_TIMEOUT_MS
     ack_retries: int = UF4_DEFAULT_ACK_RETRIES
-    arbitration_slot_ms: int = UF4_DEFAULT_ARBITRATION_SLOT_MS
 
 
 @dataclass
@@ -182,7 +203,6 @@ class Uf4Register:
 @dataclass
 class _PendingRequest:
     seq: int
-    dst: int
     expected_cmd: int
     frame: bytes
     retries_left: int
@@ -214,8 +234,6 @@ def crc16(data: bytes | bytearray | memoryview) -> int:
 def frame_crc(frame: Uf4Frame) -> int:
     body = bytes(
         [
-            _u8(frame.src),
-            _u8(frame.dst),
             _u8(frame.seq),
             _u8(frame.flags),
             _u8(frame.cmd),
@@ -225,37 +243,19 @@ def frame_crc(frame: Uf4Frame) -> int:
     return crc16(body)
 
 
-def build_frame_to(
-    src: int,
-    dst: int,
-    seq: int,
-    flags: int,
-    cmd: int,
-    data: bytes | bytearray | memoryview | None = b"",
-) -> bytes:
-    payload = bytes(data or b"")
-    if len(payload) > UF4_MAX_DATA_LEN:
-        raise ValueError(f"UF4COM DATA too long: {len(payload)} > {UF4_MAX_DATA_LEN}")
-
-    frame_flags = _u8(flags)
-    if _u8(dst) == UF4_BROADCAST_ID:
-        frame_flags |= Uf4Flag.BROADCAST
-
-    body = bytes([_u8(src), _u8(dst), _u8(seq), frame_flags, _u8(cmd), len(payload)]) + payload
-    crc = crc16(body)
-    return bytes([UF4_SOF1, UF4_SOF2]) + body + bytes([crc & 0xFF, crc >> 8])
-
-
 def build_frame(
     cmd: int,
     seq: int,
     data: bytes | bytearray | memoryview | None = b"",
     flags: int = 0,
-    *,
-    src: int = UF4_DEFAULT_MASTER_ID,
-    dst: int = UF4_DEFAULT_DEVICE_ID,
 ) -> bytes:
-    return build_frame_to(src, dst, seq, flags, cmd, data)
+    payload = bytes(data or b"")
+    if len(payload) > UF4_MAX_DATA_LEN:
+        raise ValueError(f"UF4COM DATA too long: {len(payload)} > {UF4_MAX_DATA_LEN}")
+
+    body = bytes([_u8(seq), _u8(flags), _u8(cmd), len(payload)]) + payload
+    crc = crc16(body)
+    return bytes([UF4_SOF1, UF4_SOF2]) + body + bytes([crc & 0xFF, crc >> 8])
 
 
 def response_cmd_for(cmd: int) -> int:
@@ -264,6 +264,7 @@ def response_cmd_for(cmd: int) -> int:
         Uf4Command.WRITE_REQ: Uf4Command.WRITE_RSP,
         Uf4Command.STREAM_START_REQ: Uf4Command.STREAM_START_RSP,
         Uf4Command.STREAM_STOP_REQ: Uf4Command.STREAM_STOP_RSP,
+        Uf4Command.SAVE_REQ: Uf4Command.SAVE_RSP,
     }
     return int(mapping.get(_u8(cmd), _u8(cmd)))
 
@@ -274,6 +275,7 @@ def is_request_cmd(cmd: int) -> bool:
         Uf4Command.WRITE_REQ,
         Uf4Command.STREAM_START_REQ,
         Uf4Command.STREAM_STOP_REQ,
+        Uf4Command.SAVE_REQ,
     }
 
 
@@ -327,13 +329,11 @@ def iter_tv_items(data: bytes | bytearray | memoryview, strict: bool = True):
 
 
 def build_error_frame(request: Uf4Frame, rsp_cmd: int, error: int | Uf4Error) -> bytes:
-    return build_frame_to(
-        request.dst,
-        request.src,
-        request.seq,
-        Uf4Flag.ACK_FRAME | Uf4Flag.ERROR,
+    return build_frame(
         rsp_cmd,
+        request.seq,
         encode_tv(0xFF, int(error)),
+        Uf4Flag.ACK_FRAME | Uf4Flag.ERROR,
     )
 
 
@@ -353,8 +353,6 @@ class Uf4FrameParser:
 
     def reset(self) -> None:
         self.state = Uf4ParserState.WAIT_SOF1
-        self.src = 0
-        self.dst = 0
         self.seq = 0
         self.flags = 0
         self.cmd = 0
@@ -368,15 +366,8 @@ class Uf4FrameParser:
             self.state = Uf4ParserState.WAIT_SOF2 if byte == UF4_SOF1 else Uf4ParserState.WAIT_SOF1
             return None
         if self.state == Uf4ParserState.WAIT_SOF2:
-            self.state = Uf4ParserState.WAIT_SRC if byte == UF4_SOF2 else Uf4ParserState.WAIT_SOF1
-            return None
-        if self.state == Uf4ParserState.WAIT_SRC:
-            self.src = byte
-            self.state = Uf4ParserState.WAIT_DST
-            return None
-        if self.state == Uf4ParserState.WAIT_DST:
-            self.dst = byte
-            self.state = Uf4ParserState.WAIT_SEQ
+            self.state = (Uf4ParserState.WAIT_SEQ if byte == UF4_SOF2 else
+                          Uf4ParserState.WAIT_SOF2 if byte == UF4_SOF1 else Uf4ParserState.WAIT_SOF1)
             return None
         if self.state == Uf4ParserState.WAIT_SEQ:
             self.seq = byte
@@ -406,7 +397,7 @@ class Uf4FrameParser:
             return None
         if self.state == Uf4ParserState.WAIT_CRC_H:
             self.crc_rx |= byte << 8
-            frame = Uf4Frame(self.src, self.dst, self.seq, self.flags, self.cmd, bytes(self.data))
+            frame = Uf4Frame(self.seq, self.flags, self.cmd, bytes(self.data))
             valid = frame_crc(frame) == self.crc_rx
             self.reset()
             return frame if valid else None
@@ -428,7 +419,7 @@ class Uf4ComRuntime:
         config: Uf4Config | None = None,
         tx: Callable[[bytes], None] | None = None,
         frame_rx: Callable[[Uf4Frame], None] | None = None,
-        ack_event: Callable[[int, int, int, Uf4AckStatus], None] | None = None,
+        ack_event: Callable[[int, int, Uf4AckStatus], None] | None = None,
         write_apply: Callable[[], None] | None = None,
     ) -> None:
         self.config = config or Uf4Config()
@@ -442,45 +433,6 @@ class Uf4ComRuntime:
         self._registers: dict[int, Uf4Register] = {}
         self._stream_enable = False
         self._stream_ids: list[int] = []
-        self._stream_dst = UF4_DEFAULT_MASTER_ID
-
-    @property
-    def local_id(self) -> int:
-        return _u8(self.config.local_id)
-
-    def set_local_id(self, local_id: int) -> None:
-        self.config = Uf4Config(
-            local_id=_u8(local_id),
-            role=self.config.role,
-            ack_timeout_ms=self.config.ack_timeout_ms,
-            ack_retries=self.config.ack_retries,
-            arbitration_slot_ms=self.config.arbitration_slot_ms,
-        )
-
-    def arbitration_delay_ms(self, device_id: int) -> int:
-        if _u8(device_id) == UF4_BROADCAST_ID:
-            return 0
-        slot = self.config.arbitration_slot_ms or UF4_DEFAULT_ARBITRATION_SLOT_MS
-        return _u8(device_id) * slot
-
-    def is_frame_for_local_device(self, frame: Uf4Frame) -> bool:
-        return frame.dst in (self.local_id, UF4_BROADCAST_ID)
-
-    def send_frame_to(
-        self,
-        dst: int,
-        seq: int,
-        flags: int,
-        cmd: int,
-        data: bytes | bytearray | memoryview | None = b"",
-    ) -> bool:
-        frame = build_frame_to(self.local_id, dst, seq, flags, cmd, data)
-        if self.tx is None:
-            return False
-        self.tx(frame)
-        if flags & Uf4Flag.ACK_REQ and not flags & Uf4Flag.ACK_FRAME:
-            return self._add_request(dst, seq, response_cmd_for(cmd), frame)
-        return True
 
     def send_frame(
         self,
@@ -489,11 +441,17 @@ class Uf4ComRuntime:
         cmd: int,
         data: bytes | bytearray | memoryview | None = b"",
     ) -> bool:
-        return self.send_frame_to(UF4_DEFAULT_MASTER_ID, seq, flags, cmd, data)
+        frame = build_frame(cmd, seq, data, flags)
+        if self.tx is None:
+            return False
+        self.tx(frame)
+        if flags & Uf4Flag.ACK_REQ and not flags & Uf4Flag.ACK_FRAME:
+            return self._add_request(seq, response_cmd_for(cmd), frame)
+        return True
 
     def input_byte(self, byte: int) -> int:
         frame = self.parser.input_byte(byte)
-        if frame is None or not self.is_frame_for_local_device(frame):
+        if frame is None:
             return 0
         if frame.flags & Uf4Flag.ACK_FRAME:
             self._match_ack(frame)
@@ -522,7 +480,7 @@ class Uf4ComRuntime:
                 continue
             if request.retries_left <= 0:
                 request.active = False
-                self._notify_ack(request.dst, request.seq, request.expected_cmd, Uf4AckStatus.TIMEOUT)
+                self._notify_ack(request.seq, request.expected_cmd, Uf4AckStatus.TIMEOUT)
                 continue
             if self.tx is not None:
                 self.tx(request.frame)
@@ -551,17 +509,14 @@ class Uf4ComRuntime:
         else:
             register.value = _u16(value)
 
-    def _add_request(self, dst: int, seq: int, expected_cmd: int, frame: bytes) -> bool:
-        if _u8(dst) == UF4_BROADCAST_ID:
-            return True
+    def _add_request(self, seq: int, expected_cmd: int, frame: bytes) -> bool:
         if len(self._requests) >= UF4_MAX_PENDING_REQUESTS:
-            self._notify_ack(dst, seq, expected_cmd, Uf4AckStatus.DROPPED)
+            self._notify_ack(seq, expected_cmd, Uf4AckStatus.DROPPED)
             return False
         timeout = self.config.ack_timeout_ms or UF4_DEFAULT_ACK_TIMEOUT_MS
         self._requests.append(
             _PendingRequest(
                 seq=_u8(seq),
-                dst=_u8(dst),
                 expected_cmd=_u8(expected_cmd),
                 frame=bytes(frame),
                 retries_left=max(0, int(self.config.ack_retries)),
@@ -575,27 +530,24 @@ class Uf4ComRuntime:
         for request in self._requests:
             if (
                 request.active
-                and request.dst == frame.src
                 and request.seq == frame.seq
                 and request.expected_cmd == frame.cmd
             ):
                 request.active = False
-                self._notify_ack(frame.src, frame.seq, frame.cmd, Uf4AckStatus.DONE)
+                self._notify_ack(frame.seq, frame.cmd, Uf4AckStatus.DONE)
                 return True
         return False
 
-    def _notify_ack(self, dst: int, seq: int, cmd: int, status: Uf4AckStatus) -> None:
+    def _notify_ack(self, seq: int, cmd: int, status: Uf4AckStatus) -> None:
         if self.ack_event is not None:
-            self.ack_event(_u8(dst), _u8(seq), _u8(cmd), status)
+            self.ack_event(_u8(seq), _u8(cmd), status)
 
     def _should_reply(self, frame: Uf4Frame) -> bool:
-        if not frame.flags & Uf4Flag.ACK_REQ:
-            return False
-        return frame.dst != UF4_BROADCAST_ID and frame.src != UF4_BROADCAST_ID
+        return bool(frame.flags & Uf4Flag.ACK_REQ)
 
     def _send_response(self, request: Uf4Frame, flags: int, cmd: int, data: bytes = b"") -> None:
         if self.tx is not None:
-            self.tx(build_frame_to(self.local_id, request.src, request.seq, flags, cmd, data))
+            self.tx(build_frame(cmd, request.seq, data, flags))
 
     def _send_error(self, request: Uf4Frame, rsp_cmd: int, error: Uf4Error) -> None:
         if self._should_reply(request):
@@ -615,6 +567,8 @@ class Uf4ComRuntime:
             self._handle_stream_start(frame)
         elif frame.cmd == Uf4Command.STREAM_STOP_REQ:
             self._handle_stream_stop(frame)
+        elif frame.cmd == Uf4Command.SAVE_REQ:
+            self._handle_save(frame)
         else:
             self._send_error(frame, frame.cmd, Uf4Error.INVALID_CMD)
 
@@ -666,7 +620,6 @@ class Uf4ComRuntime:
                 return
         self._stream_enable = True
         self._stream_ids = ids
-        self._stream_dst = frame.src
         if self._should_reply(frame):
             self._send_response(frame, Uf4Flag.ACK_FRAME, Uf4Command.STREAM_START_RSP)
 
@@ -675,6 +628,13 @@ class Uf4ComRuntime:
         self._stream_ids = []
         if self._should_reply(frame):
             self._send_response(frame, Uf4Flag.ACK_FRAME, Uf4Command.STREAM_STOP_RSP)
+
+    def _handle_save(self, frame: Uf4Frame) -> None:
+        if frame.data:
+            self._send_error(frame, Uf4Command.SAVE_RSP, Uf4Error.INVALID_LEN)
+            return
+        if self._should_reply(frame):
+            self._send_response(frame, Uf4Flag.ACK_FRAME, Uf4Command.SAVE_RSP)
 
     def _stream_task(self) -> None:
         if not self._stream_enable or self.tx is None:
@@ -685,29 +645,24 @@ class Uf4ComRuntime:
             if register is None or len(payload) + UF4_TV_SIZE > UF4_MAX_DATA_LEN:
                 continue
             payload.extend(encode_tv(register.id, register.value))
-        self.tx(build_frame_to(self.local_id, self._stream_dst, 0, 0, Uf4Command.STREAM_DATA, bytes(payload)))
+        self.tx(build_frame(Uf4Command.STREAM_DATA, 0, bytes(payload)))
 
 
 __all__ = [
     "UF4_SOF1",
     "UF4_SOF2",
-    "UF4_BROADCAST_ID",
-    "UF4_DEFAULT_MASTER_ID",
-    "UF4_DEFAULT_DEVICE_ID",
     "UF4_MAX_DATA_LEN",
-    "UF4_V4_HEADER_LEN",
+    "UF4_V5_HEADER_LEN",
     "UF4_CRC_LEN",
     "UF4_MAX_FRAME_LEN",
     "UF4_DEFAULT_ACK_TIMEOUT_MS",
     "UF4_DEFAULT_ACK_RETRIES",
-    "UF4_DEFAULT_ARBITRATION_SLOT_MS",
     "UF4_MAX_PENDING_REQUESTS",
     "UF4_TV_SIZE",
     "Uf4Command",
     "Uf4Flag",
     "Uf4DataId",
     "Uf4Error",
-    "Uf4Role",
     "Uf4AckStatus",
     "Uf4IdPermission",
     "Uf4Frame",
@@ -719,7 +674,6 @@ __all__ = [
     "crc16",
     "frame_crc",
     "build_frame",
-    "build_frame_to",
     "build_error_frame",
     "response_cmd_for",
     "is_request_cmd",

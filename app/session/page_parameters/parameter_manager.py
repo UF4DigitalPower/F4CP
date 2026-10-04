@@ -74,52 +74,60 @@ class ParameterRangeError(ParameterError):
 
 
 PARAMETER_SPECS = (
-    # ParameterSpec("实时遥测", "输入电压", "0x0A", "RO", 0, "0.01 V", 0, 65535, "UF4_ID_INPUT_VOLTAGE"),
-    # ParameterSpec("实时遥测", "输入电流", "0x0B", "RO", 0, "0.01 A", 0, 65535, "UF4_ID_INPUT_CURRENT"),
-    # ParameterSpec("实时遥测", "输出电压", "0x0C", "RO", 0, "0.01 V", 0, 65535, "UF4_ID_OUTPUT_VOLTAGE"),
-    # ParameterSpec("实时遥测", "输出电流", "0x0D", "RO", 0, "0.01 A", 0, 65535, "UF4_ID_OUTPUT_CURRENT"),
-    # ParameterSpec("实时遥测", "通道温度1", "0x0E", "RO", 0, "0.01 deg C", 0, 65535, "UF4_ID_CORE_TEMPERATURE"),
-    # ParameterSpec("实时遥测", "温度 1", "0x0F", "RO", 0, "0.01 deg C", 0, 65535, "UF4_ID_TEMP1_TEMPERATURE"),
-    # ParameterSpec("实时遥测", "温度 2", "0x10", "RO", 0, "0.01 deg C", 0, 65535, "UF4_ID_TEMP2_TEMPERATURE"),
-    # ParameterSpec("状态只读", "CC/CV 模式", "0x14", "RO", 0, "enum", 0, 65535, "UF4_ID_CC_CV_MODE"),
-    # ParameterSpec("状态只读", "故障状态", "0x16", "RO", 0, "bits", 0, 65535, "UF4_ID_FAULT_STATE"),
-    # ParameterSpec("状态只读", "状态机标志位", "0x17", "RO", 0, "bits", 0, 65535, "UF4_ID_STATE_MACHINE_FLAG_BITS"),
-    # ParameterSpec("状态只读", "状态机状态", "0x18", "RO", 0, "enum", 0, 65535, "UF4_ID_STATE_MACHINE_STATE"),
-    # ParameterSpec("原始与环路", "输入电压原始值", "0x19", "RO", 0, "raw", 0, 65535, "UF4_ID_INPUT_VOLTAGE_RAW"),
-    # ParameterSpec("原始与环路", "输入电流原始值", "0x1A", "RO", 0, "raw", 0, 65535, "UF4_ID_INPUT_CURRENT_RAW"),
-    # ParameterSpec("原始与环路", "输出电压原始值", "0x1B", "RO", 0, "raw", 0, 65535, "UF4_ID_OUTPUT_VOLTAGE_RAW"),
-    # ParameterSpec("原始与环路", "输出电流原始值", "0x1C", "RO", 0, "raw", 0, 65535, "UF4_ID_OUTPUT_CURRENT_RAW"),
-    ParameterSpec("原始与环路", "OTP 当前值", "0x1D", "RO", 0, "0.01 deg C", 0, 65535, "UF4_ID_OTP_VALUE"),
-    ParameterSpec("原始与环路", "OVP 当前值", "0x1F", "RO", 0, "0.01 V", 0, 65535, "UF4_ID_OVP_VALUE"),
-    ParameterSpec("原始与环路", "OCP 当前值", "0x21", "RO", 0, "0.01 A", 0, 65535, "UF4_ID_OCP_VALUE"),
-    ParameterSpec("原始与环路", "占空比指令", "0x23", "RO", 0, "raw", 0, 65535, "UF4_ID_DUTY_CMD"),
-    ParameterSpec("原始与环路", "PWM A 比较值", "0x24", "RO", 0, "raw", 0, 65535, "UF4_ID_PWM_A_COMPARE"),
-    ParameterSpec("原始与环路", "PWM D 比较值", "0x25", "RO", 0, "raw", 0, 65535, "UF4_ID_PWM_D_COMPARE"),
+    ParameterSpec("实时遥测", "输入电压", "0x0A", "RO", 0, "0.01 V", 0, 65535, "UF4_ID_INPUT_VOLTAGE"),
+    ParameterSpec("实时遥测", "输入电流", "0x0B", "RO", 0, "0.01 A", 0, 65535, "UF4_ID_INPUT_CURRENT"),
+    ParameterSpec("实时遥测", "输出电压", "0x0C", "RO", 0, "0.01 V", 0, 65535, "UF4_ID_OUTPUT_VOLTAGE"),
+    ParameterSpec("实时遥测", "输出电流", "0x0D", "RO", 0, "0.01 A", 0, 65535, "UF4_ID_OUTPUT_CURRENT"),
+    ParameterSpec("实时遥测", "核心温度", "0x0E", "RO", 0, "0.01 deg C", 0, 65535, "UF4_ID_CORE_TEMPERATURE"),
+    ParameterSpec("实时遥测", "温度 1", "0x0F", "RO", 0, "0.01 deg C", 0, 65535, "UF4_ID_TEMP1_TEMPERATURE"),
+    ParameterSpec("实时遥测", "温度 2", "0x10", "RO", 0, "0.01 deg C", 0, 65535, "UF4_ID_TEMP2_TEMPERATURE"),
+    ParameterSpec("状态与诊断", "CC/CV 模式", "0x14", "RO", 0, "enum", 0, 65535, "UF4_ID_CC_CV_MODE"),
+    ParameterSpec("状态与诊断", "状态机状态", "0x15", "RO", 0, "enum", 0, 65535, "UF4_ID_POWER_STATE"),
+    ParameterSpec("状态与诊断", "故障状态", "0x16", "RO", 0, "enum", 0, 65535, "UF4_ID_FAULT_STATE"),
+    ParameterSpec("状态与诊断", "保护标志位", "0x17", "RO", 0, "bits", 0, 65535, "UF4_ID_STATE_MACHINE_FLAG_BITS"),
+    ParameterSpec("原始与环路", "输入电压原始值", "0x19", "RO", 0, "raw", 0, 4095, "UF4_ID_INPUT_VOLTAGE_RAW"),
+    ParameterSpec("原始与环路", "输入电流原始值", "0x1A", "RO", 0, "raw", 0, 4095, "UF4_ID_INPUT_CURRENT_RAW"),
+    ParameterSpec("原始与环路", "输出电压原始值", "0x1B", "RO", 0, "raw", 0, 4095, "UF4_ID_OUTPUT_VOLTAGE_RAW"),
+    ParameterSpec("原始与环路", "输出电流原始值", "0x1C", "RO", 0, "raw", 0, 4095, "UF4_ID_OUTPUT_CURRENT_RAW"),
+    ParameterSpec("原始与环路", "占空比指令", "0x23", "RO", 0, "permille", 0, 1000, "UF4_ID_DUTY_CMD"),
     ParameterSpec("原始与环路", "风扇转速", "0x26", "RO", 0, "rpm", 0, 65535, "UF4_ID_FAN_SPEED"),
-    ParameterSpec("原始与环路", "电流环反馈", "0x29", "RO", 0, "raw", 0, 65535, "UF4_ID_LOOP_CURRENT_FEEDBACK"),
-    ParameterSpec("原始与环路", "电流环参考", "0x2A", "RO", 0, "raw", 0, 65535, "UF4_ID_LOOP_CURRENT_REFERENCE"),
-    ParameterSpec("原始与环路", "电压环电流参考", "0x2B", "RO", 0, "raw", 0, 65535, "UF4_ID_VOLTAGE_LOOP_CURRENT_REFERENCE"),
+    ParameterSpec("状态与诊断", "FMAC 自检值 1", "0x28", "RO", 0, "raw", 0, 65535, "UF4_ID_FMAC_SELFTEST_FIRST_RAW"),
+    ParameterSpec("原始与环路", "电流环反馈", "0x29", "RO", 0, "0.01 A", 0, 65535, "UF4_ID_LOOP_CURRENT_FEEDBACK"),
+    ParameterSpec("原始与环路", "电流环参考", "0x2A", "RO", 0, "0.01 A", 0, 65535, "UF4_ID_LOOP_CURRENT_REFERENCE"),
+    ParameterSpec("原始与环路", "电压环电流参考", "0x2B", "RO", 0, "0.01 A", 0, 65535, "UF4_ID_VOLTAGE_LOOP_CURRENT_REFERENCE"),
+    ParameterSpec("状态与诊断", "FMAC 自检值 2", "0x2C", "RO", 0, "raw", 0, 65535, "UF4_ID_FMAC_SELFTEST_SECOND_RAW"),
+    ParameterSpec("状态与诊断", "FMAC 诊断阶段", "0x2D", "RO", 0, "enum", 0, 65535, "UF4_ID_FMAC_DIAGNOSTIC_STAGE"),
+    ParameterSpec("状态与诊断", "FMAC 诊断状态", "0x2E", "RO", 0, "bits", 0, 65535, "UF4_ID_FMAC_DIAGNOSTIC_STATUS"),
+    ParameterSpec("状态与诊断", "DAC3 输出码", "0x2F", "RO", 0, "raw", 0, 65535, "UF4_ID_DAC3_CH1_OUTPUT_CODE"),
+    ParameterSpec("状态与诊断", "变换器模式", "0x45", "RO", 0, "enum", 0, 65535, "UF4_ID_POWER_CONVERTER_MODE"),
+    ParameterSpec("状态与诊断", "当前方向", "0x4B", "RO", 0, "enum", 0, 65535, "UF4_ID_POWER_DIRECTION_STATUS"),
+    ParameterSpec("状态与诊断", "控制中断周期", "0x4C", "RO", 0, "cycles", 0, 65535, "UF4_ID_CONTROL_ISR_LAST_CYCLES"),
+    ParameterSpec("状态与诊断", "控制中断最大周期", "0x4D", "RO", 0, "cycles", 0, 65535, "UF4_ID_CONTROL_ISR_MAX_CYCLES"),
+    ParameterSpec("状态与诊断", "控制中断超时次数", "0x4E", "RO", 0, "count", 0, 65535, "UF4_ID_CONTROL_ISR_OVERRUN_COUNT"),
+    ParameterSpec("状态与诊断", "DAC4 输出码", "0x54", "RO", 0, "raw", 0, 65535, "UF4_ID_DAC4_CH1_OUTPUT_CODE"),
+    ParameterSpec("状态与诊断", "自检状态", "0x55", "RO", 0, "bits", 0, 65535, "UF4_ID_SELF_CHECK_STATUS"),
+    ParameterSpec("状态与诊断", "锁存故障原因", "0x56", "RO", 0, "enum", 0, 65535, "UF4_ID_LATCHED_FAULT_REASON"),
 
-    ParameterSpec("运行设定", "设定电压上限", "0x11", "RW", 500, "0.01 V", 0, 10000, "UF4_ID_SET_VOLTAGE_LIMIT", True),
+    ParameterSpec("运行设定", "设定电压上限", "0x11", "RW", 500, "0.01 V", 0, 7000, "UF4_ID_SET_VOLTAGE_LIMIT", True),
     ParameterSpec("运行设定", "设定电流上限", "0x12", "RW", 100, "0.01 A", 0, 1000, "UF4_ID_SET_CURRENT_LIMIT", True),
-    ParameterSpec("运行设定", "电源开关状态", "0x15", "RW", 0, "enum", 0, 65535, "UF4_ID_POWER_STATE"),
+    ParameterSpec("运行设定", "请求方向", "0x13", "RW", 0, "enum", 0, 1, "UF4_ID_POWER_DIRECTION"),
     ParameterSpec("运行设定", "风扇设定值", "0x27", "RW", 1000, "permille", 0, 1000, "UF4_ID_FAN_SET_VALUE", True),
     ParameterSpec("运行设定", "方向模式", "0x4F", "RW", 1, "enum", 0, 1, "UF4_ID_CFG_POWER_DIRECTION_MODE", True),
+    ParameterSpec("运行设定", "输出使能", "0x50", "RW", 0, "0=关 1=开", 0, 1, "UF4_ID_OUTPUT_ENABLE"),
     ParameterSpec("保护阈值", "OTP 设定值", "0x1E", "RW", 12000, "0.01 deg C", 4000, 15000, "UF4_ID_OTP_SET_VALUE", True),
-    ParameterSpec("保护阈值", "OVP 设定值", "0x20", "RW", 0, "0.01 V", 0, 10000, "UF4_ID_OVP_SET_VALUE"),
-    ParameterSpec("保护阈值", "输出过流保护", "0x22", "RW", 1000, "0.01 A", 0, 1000, "UF4_ID_OCP_SET_VALUE", True),
-    ParameterSpec("保护阈值", "输入过压保护", "0x30", "RW", 7500, "0.01 V", 0, 10000, "UF4_ID_CFG_VIN_OVP", True),
-    ParameterSpec("保护阈值", "输入欠压保护", "0x31", "RW", 500, "0.01 V", 0, 10000, "UF4_ID_CFG_VIN_UVP", True),
-    ParameterSpec("保护阈值", "输出过压保护", "0x32", "RW", 7500, "0.01 V", 0, 10000, "UF4_ID_CFG_VOUT_OVP", True),
+    ParameterSpec("保护阈值", "输出过流保护", "0x22", "RW", 1000, "0.01 A", 1, 1000, "UF4_ID_OCP_SET_VALUE", True),
+    ParameterSpec("保护阈值", "输入过压保护", "0x30", "RW", 7000, "0.01 V", 1, 7000, "UF4_ID_CFG_VIN_OVP", True),
+    ParameterSpec("保护阈值", "输入欠压保护", "0x31", "RW", 1200, "0.01 V", 0, 7000, "UF4_ID_CFG_VIN_UVP", True),
+    ParameterSpec("保护阈值", "输出过压保护", "0x32", "RW", 7000, "0.01 V", 1, 7000, "UF4_ID_CFG_VOUT_OVP", True),
     ParameterSpec("硬件换算", "ADC 参考电压", "0x33", "RW", 330, "0.01 V", 250, 360, "UF4_ID_CFG_ADC_VREF", True),
-    ParameterSpec("硬件换算", "输入分压上电阻", "0x34", "RW", 600, "x100 ohm", 1, 65535, "UF4_ID_CFG_VIN_R_UPPER", True),
+    ParameterSpec("硬件换算", "输入分压上电阻", "0x34", "RW", 750, "x100 ohm", 1, 65535, "UF4_ID_CFG_VIN_R_UPPER", True),
     ParameterSpec("硬件换算", "输入分压下电阻", "0x35", "RW", 30, "x100 ohm", 1, 65535, "UF4_ID_CFG_VIN_R_LOWER", True),
-    ParameterSpec("硬件换算", "输出分压上电阻", "0x36", "RW", 600, "x100 ohm", 1, 65535, "UF4_ID_CFG_VOUT_R_UPPER", True),
+    ParameterSpec("硬件换算", "输出分压上电阻", "0x36", "RW", 750, "x100 ohm", 1, 65535, "UF4_ID_CFG_VOUT_R_UPPER", True),
     ParameterSpec("硬件换算", "输出分压下电阻", "0x37", "RW", 30, "x100 ohm", 1, 65535, "UF4_ID_CFG_VOUT_R_LOWER", True),
     ParameterSpec("硬件换算", "输入采样电阻", "0x38", "RW", 800, "x10 uOhm", 1, 65535, "UF4_ID_CFG_SHUNT_IN", True),
     ParameterSpec("硬件换算", "输出采样电阻", "0x39", "RW", 800, "x10 uOhm", 1, 65535, "UF4_ID_CFG_SHUNT_OUT", True),
-    ParameterSpec("硬件换算", "输入电流放大倍数", "0x3A", "RW", 100, "0.01", 1, 1000, "UF4_ID_CFG_GAIN_IN", True),
-    ParameterSpec("硬件换算", "输出电流放大倍数", "0x3B", "RW", 100, "0.01", 1, 1000, "UF4_ID_CFG_GAIN_OUT", True),
+    ParameterSpec("硬件换算", "输入电流放大倍数", "0x3A", "RW", 2000, "0.01", 2000, 2000, "UF4_ID_CFG_GAIN_IN", True),
+    ParameterSpec("硬件换算", "输出电流放大倍数", "0x3B", "RW", 2000, "0.01", 2000, 2000, "UF4_ID_CFG_GAIN_OUT", True),
     ParameterSpec("校准", "电流零点偏移", "0x3C", "RW", 0, "0.01 A", 0, 65535, "UF4_ID_CFG_CURRENT_OFFSET", True),
     ParameterSpec("校准", "输入电压增益", "0x3D", "RW", 100, "0.01", 10, 300, "UF4_ID_CFG_VIN_GAIN", True),
     ParameterSpec("校准", "输入电压偏移", "0x3E", "RW", 0, "0.01 V", 0, 65535, "UF4_ID_CFG_VIN_OFFSET", True),
@@ -129,12 +137,6 @@ PARAMETER_SPECS = (
     ParameterSpec("校准", "输入电流偏移", "0x42", "RW", 0, "0.01 A", 0, 65535, "UF4_ID_CFG_IIN_OFFSET", True),
     ParameterSpec("校准", "输出电流增益", "0x43", "RW", 100, "0.01", 10, 300, "UF4_ID_CFG_IOUT_GAIN", True),
     ParameterSpec("校准", "输出电流偏移", "0x44", "RW", 0, "0.01 A", 0, 65535, "UF4_ID_CFG_IOUT_OFFSET", True),
-    ParameterSpec("PID", "电压环 KP", "0x45", "RW", 0, "1/10000", 0, 65535, "UF4_ID_CFG_VOLTAGE_KP", True),
-    ParameterSpec("PID", "电压环 KI", "0x46", "RW", 0, "1/10000", 0, 65535, "UF4_ID_CFG_VOLTAGE_KI", True),
-    ParameterSpec("PID", "电压环 KD", "0x47", "RW", 0, "1/10000", 0, 65535, "UF4_ID_CFG_VOLTAGE_KD", True),
-    ParameterSpec("PID", "电流环 KP", "0x48", "RW", 0, "1/10000", 0, 65535, "UF4_ID_CFG_CURRENT_KP", True),
-    ParameterSpec("PID", "电流环 KI", "0x49", "RW", 0, "1/10000", 0, 65535, "UF4_ID_CFG_CURRENT_KI", True),
-    ParameterSpec("PID", "电流环 KD", "0x4A", "RW", 0, "1/10000", 0, 65535, "UF4_ID_CFG_CURRENT_KD", True),
 )
 
 
@@ -221,6 +223,15 @@ class ParameterManager:
         self._values[spec.note] = self._checked_value(spec, value)
         self._saved[spec.note] = self._values[spec.note]
 
+    def update_from_device(self, values: dict[int, int]) -> None:
+        for id_, value in values.items():
+            spec = self._by_id.get(int(id_))
+            if spec is None:
+                continue
+            checked = self._checked_value(spec, value)
+            self._values[spec.note] = checked
+            self._saved[spec.note] = checked
+
     def write(self, key: str | int, value: int) -> None:
         spec = self.spec(key)
         if not spec.writable:
@@ -276,20 +287,28 @@ class ParameterManager:
             payload = json.loads(self.storage_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return False
+        if not isinstance(payload, dict):
+            return False
         if payload.get("magic") != PARAM_MAGIC or payload.get("version") != PARAM_VERSION:
+            return False
+        records = payload.get("records", [])
+        if not isinstance(records, list):
             return False
 
         loaded = False
-        for record in payload.get("records", []):
+        for record in records:
             if not self._record_valid(record):
                 continue
             try:
                 spec = self.spec(int(record["id"]))
             except ParameterNotFoundError:
                 continue
-            if not spec.writable:
+            if not spec.writable or record.get("note", spec.note) != spec.note:
                 continue
-            value = self._checked_value(spec, int(record["value"]))
+            try:
+                value = self._checked_value(spec, int(record["value"]))
+            except ParameterRangeError:
+                continue
             self._values[spec.note] = value
             self._saved[spec.note] = value
             loaded = True
@@ -336,6 +355,8 @@ class ParameterManager:
         return record
 
     def _record_valid(self, record: dict) -> bool:
+        if not isinstance(record, dict):
+            return False
         try:
             expected = crc16_ccitt(f"{int(record['id'])}:{int(record['value'])}".encode("ascii"))
             return int(record.get("crc", -1)) == expected

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QAbstractSpinBox, QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import (
@@ -115,12 +115,18 @@ class ParameterGroupCard(CardWidget):
 
 
 class ParametersPage(ScrollArea):
+    readParametersRequested = pyqtSignal(object)
+    writeParametersRequested = pyqtSignal(object)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.scrollWidget = QWidget()
         self.mainLayout = QVBoxLayout(self.scrollWidget)
         self.groupCards: list[ParameterGroupCard] = []
         self.parameterManager = ParameterManager()
+        self._deviceConnected = False
+        self._deviceSnapshotLoaded = False
+        self._operationPending = False
 
         self.readButton = PushButton(FIF.SYNC, "读取", self.scrollWidget)
         self.resetButton = PushButton(FIF.BROOM, "恢复默认", self.scrollWidget)
@@ -130,7 +136,7 @@ class ParametersPage(ScrollArea):
         readonly_count = total_count - writable_count
         self.header = PageHeader(
             "参数设置",
-            f"参数来源：STM32G474RBT6"
+            f"参数来源：STM32G474RBT6 / "
             f"共 {total_count} 项，RW {writable_count} 项，RO {readonly_count} 项",
             self.scrollWidget,
         )
@@ -151,6 +157,7 @@ class ParametersPage(ScrollArea):
         self.__connectSignals()
         self.__applyLocalStyle()
         self.__syncRowsFromManager()
+        self.__updateActionState()
 
     def __initLayout(self) -> None:
         self.header.addActions((self.readButton, self.resetButton, self.saveButton))
@@ -194,8 +201,8 @@ class ParametersPage(ScrollArea):
         self.mainLayout.addStretch(1)
 
     def __connectSignals(self) -> None:
-        self.readButton.clicked.connect(self.__loadLocalParameters)
-        self.saveButton.clicked.connect(self.__saveLocalParameters)
+        self.readButton.clicked.connect(self.__readDeviceParameters)
+        self.saveButton.clicked.connect(self.__saveDeviceParameters)
         self.resetButton.clicked.connect(self.__resetDefaults)
 
     def __resetDefaults(self) -> None:
@@ -204,22 +211,74 @@ class ParametersPage(ScrollArea):
             card.resetValues()
         InfoBar.success("已恢复默认", "当前仅恢复界面里的 RW 默认参数值。", duration=1800, parent=self)
 
-    def __loadLocalParameters(self) -> None:
-        loaded = self.parameterManager.load()
-        self.__syncRowsFromManager()
-        if loaded:
-            InfoBar.success("已读取", "已加载本地持久化参数快照。", duration=1800, parent=self)
-        else:
-            InfoBar.info("没有快照", "未找到有效本地参数快照，保持当前默认值。", duration=2200, parent=self)
+    def bindPowerClient(self, client) -> None:
+        self.readParametersRequested.connect(client.read_parameters)
+        self.writeParametersRequested.connect(client.write_parameters)
+        client.connectionChanged.connect(self.__onConnectionChanged)
+        client.parametersRead.connect(self.__onParametersRead)
+        client.parametersSaved.connect(self.__onParametersSaved)
+        client.errorOccurred.connect(self.__onDeviceError)
 
-    def __saveLocalParameters(self) -> None:
+    def __readDeviceParameters(self) -> None:
+        if not self._deviceConnected:
+            InfoBar.warning("未连接", "请先在设备页连接 G474 串口。", duration=2200, parent=self)
+            return
+        self._operationPending = True
+        self.__updateActionState()
+        self.readParametersRequested.emit(tuple(spec.id_value for spec in PARAMETER_SPECS))
+
+    def __saveDeviceParameters(self) -> None:
+        if not self._deviceConnected or not self._deviceSnapshotLoaded:
+            InfoBar.warning("尚未读取", "请先读取 G474 参数，再提交修改。", duration=2200, parent=self)
+            return
         try:
             self.parameterManager.write_many(self.__rowValues())
-            self.parameterManager.save()
         except ValueError as exc:
             InfoBar.error("保存失败", str(exc), duration=2600, parent=self)
             return
-        InfoBar.success("已保存", "持久化 RW 参数已保存到本地快照。", duration=1800, parent=self)
+        self._operationPending = True
+        self.__updateActionState()
+        self.writeParametersRequested.emit(self.parameterManager.protocol_pairs(dirty_only=True))
+
+    def __onConnectionChanged(self, connected: bool) -> None:
+        self._deviceConnected = bool(connected)
+        if not connected:
+            self._deviceSnapshotLoaded = False
+            self._operationPending = False
+        self.__updateActionState()
+
+    def __onParametersRead(self, values: dict[int, int]) -> None:
+        try:
+            self.parameterManager.update_from_device(values)
+        except ValueError as exc:
+            self.__onDeviceError(str(exc))
+            return
+        self._deviceSnapshotLoaded = True
+        self._operationPending = False
+        self.__syncRowsFromManager()
+        self.__updateActionState()
+        InfoBar.success("读取完成", f"已从 G474 读取 {len(values)} 个寄存器。", duration=1800, parent=self)
+
+    def __onParametersSaved(self) -> None:
+        self._operationPending = False
+        self.parameterManager.save()
+        self.parameterManager.mark_saved()
+        self.__updateActionState()
+        InfoBar.success("保存完成", "参数已写入 G474 并完成 Flash 保存。", duration=2200, parent=self)
+
+    def __onDeviceError(self, message: str) -> None:
+        if not self._operationPending:
+            return
+        self._operationPending = False
+        self.__updateActionState()
+        InfoBar.error("通信失败", message, duration=3000, parent=self)
+
+    def __updateActionState(self) -> None:
+        self.readButton.setEnabled(self._deviceConnected and not self._operationPending)
+        self.saveButton.setEnabled(
+            self._deviceConnected and self._deviceSnapshotLoaded and not self._operationPending
+        )
+        self.resetButton.setEnabled(self._deviceSnapshotLoaded and not self._operationPending)
 
     def __syncRowsFromManager(self) -> None:
         values = {spec.note: self.parameterManager.read(spec.note) for spec in PARAMETER_SPECS}

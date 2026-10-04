@@ -63,8 +63,54 @@ class DaplinkPageController(_NullPageController):
 
 
 class DevicePageController(_NullPageController):
-    pass
+    def bind(self) -> None:
+        page = self.page
+        if page is None:
+            return
+        page.refreshButton.clicked.connect(page.refreshCurrentConnectionTargets)
+        page.connectButton.clicked.connect(page.toggleConnection)
+        page.connectionTypeCombo.currentTextChanged.connect(page._onConnectionTypeChanged)
+        page.modeCombo.currentIndexChanged.connect(page._applyMode)
+        page.sendButton.clicked.connect(page.onSend)
+        page.addTlvBtn.clicked.connect(page._addDefaultTlvRow)
+        page.delTlvBtn.clicked.connect(page._deleteSelectedTlvRows)
+        page.exportTlvBtn.clicked.connect(page._exportTlvJsonToTx)
+        page.importTlvBtn.clicked.connect(page._importTlvJsonFromTx)
+        page.clearButton.clicked.connect(page.logEdit.clear)
 
 
 class PowerPageController(_NullPageController):
-    pass
+    def bind(self) -> None:
+        page = self.page
+        if page is None:
+            return
+        client = page._client
+
+        page.refreshTargetButton.clicked.connect(page.refreshSerialPorts)
+        page.connectButton.clicked.connect(page.toggleConnection)
+        page.refreshButton.clicked.connect(page._readStatusOnce)
+        page.autoPollSwitch.checkedChanged.connect(page._onAutoPollChanged)
+        page.parameterEditor.outputSwitch.checkedChanged.connect(page._onOutputSwitchChanged)
+        page.parameterEditor.clearFaultButton.clicked.connect(page._clearFault)
+        page.parameterEditor.applyOutputButton.clicked.connect(page._applyOutputLimits)
+        page.parameterEditor.applyProtectButton.clicked.connect(page._applyProtectionValues)
+        page.clearLogButton.clicked.connect(page.logEdit.clear)
+
+        page.attachSessionRequested.connect(client.attach_session)
+        page.detachSessionRequested.connect(client.detach_session)
+        page.readStatusRequested.connect(client.read_status)
+        page.outputLimitsRequested.connect(client.write_output_limits)
+        page.protectionValuesRequested.connect(client.write_protection_values)
+        page.powerStateRequested.connect(client.write_power_state)
+        page.clearFaultRequested.connect(client.clear_fault)
+        page.startPollingRequested.connect(client.start_polling)
+        page.stopPollingRequested.connect(client.stop_polling)
+
+        client.connectionChanged.connect(page._onConnectionChanged)
+        client.statusUpdated.connect(page._updateStatusView)
+        client.errorOccurred.connect(page._onClientError)
+        client.outputLimitsWritten.connect(page._onOutputLimitsWritten)
+        client.protectionValuesWritten.connect(page._onProtectionValuesWritten)
+        client.powerStateWritten.connect(page._onPowerStateWritten)
+        client.faultClearWritten.connect(page._onFaultClearWritten)
+        client.writeTransactionFinished.connect(page._onWriteTransactionFinished)

@@ -15,18 +15,6 @@
       "crc": 61422
     },
     {
-      "id": 30,
-      "note": "UF4_ID_OTP_SET_VALUE",
-      "value": 12000,
-      "crc": 57033
-    },
-    {
-      "id": 34,
-      "note": "UF4_ID_OCP_SET_VALUE",
-      "value": 1000,
-      "crc": 49042
-    },
-    {
       "id": 39,
       "note": "UF4_ID_FAN_SET_VALUE",
       "value": 1000,
@@ -37,6 +25,18 @@
       "note": "UF4_ID_CFG_POWER_DIRECTION_MODE",
       "value": 1,
       "crc": 28188
+    },
+    {
+      "id": 30,
+      "note": "UF4_ID_OTP_SET_VALUE",
+      "value": 12000,
+      "crc": 57033
+    },
+    {
+      "id": 34,
+      "note": "UF4_ID_OCP_SET_VALUE",
+      "value": 1000,
+      "crc": 49042
     },
     {
       "id": 48,
