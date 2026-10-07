@@ -30,8 +30,8 @@
             "Microsoft YaHei",
             "PingFang SC"
         ],
-        "ThemeColor": "#ffff1010",
-        "ThemeMode": "Dark"
+        "ThemeColor": "#ffb923ff",
+        "ThemeMode": "Light"
     },
     "Appearance": {
         "FontFamily": "",
