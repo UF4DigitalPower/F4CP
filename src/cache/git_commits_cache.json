@@ -1,5 +1,11 @@
 [
   {
+    "author": "Yu℃",
+    "date": "2026-10-08",
+    "short_hash": "556d65c",
+    "subject": "Update README.md"
+  },
+  {
     "author": "UF4",
     "date": "2026-06-19",
     "short_hash": "397577a",
@@ -232,11 +238,5 @@
     "date": "2026-06-06",
     "short_hash": "957822a",
     "subject": "feat: update build configuration for F4CP_debug branch and bump version to 0.5.5.dev1"
-  },
-  {
-    "author": "Yu℃",
-    "date": "2026-06-03",
-    "short_hash": "99ca6dd",
-    "subject": "Merge pull request #30 from UF4OVER/F4CP_debug"
   }
 ]

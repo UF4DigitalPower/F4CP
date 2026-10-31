@@ -8,7 +8,7 @@ version = "2.0.0.A1"
 # 无后缀   正式版
 description = "power management system"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.15"
 license = "GPL-3.0-only"
 license-files = ["LICENSE"]
 authors = [
@@ -16,7 +16,7 @@ authors = [
 ]
 
 dependencies = [
-    "cx-freeze>=8.6.4",
+    "cx-freeze>=8.7",
     "PyQt5>=5.15.2",
     "pyocd>=0.44.1",
     "pyqt-fluent-widgets>=1.11.2",
@@ -26,8 +26,8 @@ dependencies = [
 
 [tool.uv]
 constraint-dependencies = [
-    "pyqt5-qt5 <=5.15.2",
-    "capstone <=5.0.2",
+    "pyqt5-qt5 >=5.15.2",
+    "capstone >=5.0.2",
 ]
 
 
