@@ -31,7 +31,28 @@ uv sync --upgrade-package lief --upgrade-package pyqt5-sip --upgrade-package bit
 uv run python start.py
 ```
 
-程序会加载 `app/` 下的界面和协议代码，`config/config.py` 保存本地配置。
+程序会加载 `app/` 下的界面和协议代码，本地设置保存在 `src/config/config.json`。
+
+## 配置模块
+
+`config/` 按职责拆分：
+
+- `schema.py`：配置项、默认值、验证和 Fluent 主题绑定；每个实例拥有独立配置项。
+- `context.py`：`AppContext`、全局 `CTX` / `cfg`，以及加载、重载和保存入口。
+- `paths.py`：源码与 cx_Freeze 环境下的目录解析，保留现有路径属性。
+- `storage.py`：JSON 读取、旧配置迁移和原子写入，保存时保留未知字段。
+- `logging.py`：日志初始化与 `get_logger()`，重复初始化不添加重复处理器。
+- `constants.py`：配置分组、键名与软件仓库地址。
+- `config.py` / `__init__.py`：兼容原有导入入口，现有 `from config import CTX, cfg, VERSION` 继续可用。
+
+业务代码通过 `cfg.set(cfg.includePrereleases, True)` 保存设置；手动修改 JSON 后，
+调用 `CTX.reload()` 原地更新配置并通知主题变化。重载保留配置项对象和已有信号连接，
+读取失败时返回 `False`，错误可通过 `CTX.last_load_error` 查看，原文件和已有设置保持不变。
+保存采用同目录临时文件加原子替换，格式损坏的 JSON 不会被默认设置覆盖。
+
+测试或独立工具可使用 `AppContext(base_dir=临时目录, init_logging=False)`；
+此类上下文独立读写自己的文件，不会替换应用的全局配置和主题。
+`config.VERSION` 等模块属性读取当前配置值；使用 `from config import VERSION` 得到的是导入当时的值。
 
 ## 软件更新
 

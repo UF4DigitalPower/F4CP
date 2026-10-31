@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING
 from PyQt5.QtGui import QFontDatabase
 from PyQt5.QtWidgets import QApplication
 from qfluentwidgets import FluentIcon as FIF
-from qfluentwidgets import qconfig, QConfig, ConfigItem, OptionsConfigItem, OptionsValidator, BoolValidator
 
 from config import CTX, cfg, get_logger
 
@@ -120,13 +119,14 @@ def get_saved_font_key(ctx: AppContext | None = None) -> str:
 
 def save_font_selection(option: FontOption, ctx: AppContext | None = None):
     qcfg_obj = _resolve_qcfg(ctx)
-    qconfig.set(qcfg_obj.fontFile, option.key)
-    qconfig.set(qcfg_obj.fontFamily, option.family)
+    qcfg_obj.set(qcfg_obj.fontFile, option.key)
+    qcfg_obj.set(qcfg_obj.fontFamily, option.family)
 
 
-def apply_font_option(app: QApplication, option: FontOption) -> list[str]:
+def apply_font_option(app: QApplication, option: FontOption, ctx: AppContext | None = None) -> list[str]:
     families = _merge_font_families(option.family)
-    qconfig.set(qconfig.fontFamilies, families, save=False)
+    qcfg_obj = _resolve_qcfg(ctx)
+    qcfg_obj.set(qcfg_obj.fontFamilies, families, save=False)
 
     app_font = app.font()
     app_font.setFamilies(families)
@@ -146,20 +146,20 @@ def loadSavedFont(app: QApplication, ctx: AppContext | None = None) -> list[str]
 
     selected_key = get_saved_font_key(ctx)
     if selected_key == SYSTEM_FONT_KEY:
-        return apply_font_option(app, _system_font_option())
+        return apply_font_option(app, _system_font_option(), ctx)
 
     font_path = dirs.FontDir / selected_key
     if not font_path.exists():
         logger.warning(f"Saved font file does not exist: {font_path}")
-        return apply_font_option(app, _system_font_option())
+        return apply_font_option(app, _system_font_option(), ctx)
 
     families = _load_font_file(font_path)
     if not families:
-        return apply_font_option(app, _system_font_option())
+        return apply_font_option(app, _system_font_option(), ctx)
 
     saved_family = getattr(getattr(qcfg_obj, "fontFamily", None), "value", "") or ""
     if not saved_family:
         saved_family = families[0]
-        qconfig.set(qcfg_obj.fontFamily, saved_family)
+        qcfg_obj.set(qcfg_obj.fontFamily, saved_family)
     primary_family = saved_family if saved_family in families else families[0]
-    return apply_font_option(app, FontOption(selected_key, primary_family, primary_family, selected_key))
+    return apply_font_option(app, FontOption(selected_key, primary_family, primary_family, selected_key), ctx)
