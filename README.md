@@ -39,6 +39,7 @@ uv run python start.py
 
 - `schema.py`：配置项、默认值、验证和 Fluent 主题绑定；每个实例拥有独立配置项。
 - `context.py`：`AppContext`、全局 `CTX` / `cfg`，以及加载、重载和保存入口。
+- `versions.py`：统一的软件、Power 和 Upper 当前/最新版本管理服务。
 - `paths.py`：源码与 cx_Freeze 环境下的目录解析，保留现有路径属性。
 - `storage.py`：JSON 读取、旧配置迁移和原子写入，保存时保留未知字段。
 - `logging.py`：日志初始化与 `get_logger()`，重复初始化不添加重复处理器。
@@ -52,7 +53,35 @@ uv run python start.py
 
 测试或独立工具可使用 `AppContext(base_dir=临时目录, init_logging=False)`；
 此类上下文独立读写自己的文件，不会替换应用的全局配置和主题。
-`config.VERSION` 等模块属性读取当前配置值；使用 `from config import VERSION` 得到的是导入当时的值。
+`config.VERSION` 读取运行软件的版本，其余模块属性读取当前配置值；
+使用 `from config import VERSION` 得到的是导入当时的值。
+
+## 版本管理
+
+`app/version.py` 统一版本比较、版本状态和不可变快照；`CTX.versions`（也可导入
+`version_manager`）统一读写版本缓存，并通过 `changed(snapshot)` 通知首页、版本页和设置页。
+组件名统一为 `App`、`Power`、`Upper`，配置使用两个分组：
+
+```json
+{
+    "VersionCurrent": {"App": "2.0.0.A1", "Power": "", "Upper": ""},
+    "VersionLatest": {"App": "", "Power": "", "Upper": ""}
+}
+```
+
+空字符串表示版本未知。旧 `OldVersion` / `NewVersion` 字段与 `Application.Version` 会在读取时迁移，
+保存时写入新结构；已有新字段优先，旧分组中的扩展字段继续保留。旧 `cfg.appVersion`、
+`cfg.localAppVersion`、`cfg.localLowerVersion` 等名称是同一配置项的兼容别名，不重复保存。
+
+软件当前版本优先读取 `pyproject.toml` 的 `[project].version`，其次读取已安装的 F4CP 包元数据；
+仅旧打包程序缺少这些元数据时才使用已迁移的本地记录。cx_Freeze 配置会将 `pyproject.toml`
+一同打包。检查 Release 只更新“最新版本”，下载更新包不会改写“当前版本”。
+
+业务代码可用 `version_manager.snapshot().app.has_update` 判断软件更新，
+通过 `version_manager.set_latest("Power", version)` 更新远程版本；确认本地固件版本后调用
+`version_manager.set_current("Power", version)`。软件当前版本不允许通过此写入接口修改。
+比较状态明确区分未知、格式无效、已是最新、有可用更新和本地领先，支持 `v` 前缀及 Alpha/Beta/RC。
+保存失败会回滚本次写入，检查失败保留上次成功缓存。
 
 ## 软件更新
 

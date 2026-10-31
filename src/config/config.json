@@ -5,15 +5,15 @@
         "ExampleUrl": "https://github.com/UF4OVER/UF4DigitalPower",
         "FeedbackUrl": "https://github.com/UF4OVER/UF4DigitalPower/issues",
         "HelpUrl": "https://update.hepi.ng/docs/help",
-        "ReleaseUrl": "https://github.com/UF4OVER/UF4DigitalPower/releases/latest",
-        "RepoUrl": "https://github.com/UF4OVER/UF4DigitalPower",
-        "Version": "2.0.0.A1",
+        "ReleaseUrl": "https://github.com/UF4DigitalPower/F4CP/releases/latest",
+        "RepoUrl": "https://github.com/UF4DigitalPower/F4CP",
         "Year": 2026,
         "ZhSupportUrl": "https://github.com/UF4OVER/UF4DigitalPower"
     },
     "Update": {
         "CheckUpdateAtStartUp": false,
-        "UpdateUrl": "https://github.com/UF4OVER/UF4DigitalPower/releases"
+        "UpdateUrl": "https://github.com/UF4DigitalPower/F4CP/releases",
+        "IncludePrereleases": false
     },
     "Daplink": {
         "OpenocdExe": "",
@@ -34,8 +34,8 @@
         "ThemeMode": "Dark"
     },
     "Appearance": {
-        "FontFamily": "",
-        "FontFile": "__system__"
+        "FontFamily": "Blender Pro Book",
+        "FontFile": "Blender.otf"
     },
     "GithubAuth": {
         "AvatarUrl": "",
@@ -49,14 +49,14 @@
         "HighDpiScaling": true,
         "MicaEnabled": true
     },
-    "NewVersion": {
-        "NewLocalVersion": "v1.1.0.RC1",
-        "NewLowerVersion": "v1.4.2",
-        "NewUpperVersion": "v1.4.1"
+    "VersionCurrent": {
+        "App": "2.0.0.A1",
+        "Power": "v1.4.2",
+        "Upper": "v1.4.1"
     },
-    "OldVersion": {
-        "OldLocalVersion": "2.0.0.A1",
-        "OldLowerVersion": "v1.4.2",
-        "OldUpperVersion": "v1.4.1"
+    "VersionLatest": {
+        "App": "v1.1.0.RC1",
+        "Power": "v1.4.2",
+        "Upper": "v1.4.1"
     }
 }

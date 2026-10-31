@@ -29,7 +29,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-from app.version import Version, VersionError, parse_version as _parse_version
+from app.version import Version, VersionError, is_newer_version as _is_newer_version, parse_version as _parse_version
 
 
 DEFAULT_REPOSITORY = "https://github.com/UF4DigitalPower/F4CP"
@@ -91,7 +91,10 @@ def parse_version(value: str) -> Version:
 
 
 def is_newer_version(remote: str, local: str) -> bool:
-    return parse_version(remote) > parse_version(local)
+    try:
+        return _is_newer_version(remote, local)
+    except VersionError as exc:
+        raise ReleaseError(str(exc)) from exc
 
 
 def network_error(exc: Exception) -> str:
