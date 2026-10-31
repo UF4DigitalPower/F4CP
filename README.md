@@ -48,6 +48,8 @@ uv run python start.py
 Release 页面或 API 地址。原先指向 `UF4OVER/UF4DigitalPower` 的默认软件地址会自动迁移；
 固件更新配置保持独立。
 
+更新模块测试：`uv run python -m unittest discover -s tests -v`。
+
 ## 主要目录
 
 - `app/protocol/`：UF4COM 协议实现。
