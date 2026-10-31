@@ -19,26 +19,14 @@ from PyQt5.QtCore import QEvent, QThread, pyqtSignal
 
 from .manager_font import *
 from .manager_stylesheet import *
-
-
-@dataclass(frozen=True)
-class VersionSnapshot:
-    local_app_version: str = ""
-    latest_app_version: str = ""
-    local_lower_version: str = ""
-    latest_lower_version: str = ""
-    local_upper_version: str = ""
-    latest_upper_version: str = ""
-
-
-@dataclass(frozen=True)
-class UpdateCheckResult:
-    success: bool = False
-    manual: bool = True
-    has_changes: bool = False
-    message: str = "更新逻辑已移除。"
-    snapshot: VersionSnapshot = field(default_factory=VersionSnapshot)
-    release_tag: str = ""
+from .manager_update import (
+    AppDownloadResult,
+    UpdateCheckFinishedEvent,
+    UpdateCheckResult,
+    UpdateManager,
+    VersionSnapshot,
+    update_manager,
+)
 
 
 @dataclass(frozen=True)
@@ -109,10 +97,6 @@ class _ResultEvent(QEvent):
         self.result = result
 
 
-class UpdateCheckFinishedEvent(_ResultEvent):
-    pass
-
-
 class FirmwareCheckFinishedEvent(_ResultEvent):
     pass
 
@@ -127,16 +111,6 @@ class FirmwareHistoryFinishedEvent(_ResultEvent):
 
 class FirmwareDetailFinishedEvent(_ResultEvent):
     pass
-
-
-class _DisabledUpdateManager:
-    is_checking = False
-
-    def get_cached_versions(self) -> VersionSnapshot:
-        return VersionSnapshot()
-
-    def check_for_updates(self, parent=None, manual: bool = True) -> bool:
-        return False
 
 
 class _DisabledFirmwareCheckManager:
@@ -219,7 +193,6 @@ GithubLoginThread = _DisabledGithubThread
 GithubLogoutThread = _DisabledGithubThread
 GithubSessionRefreshThread = _DisabledGithubThread
 
-update_manager = _DisabledUpdateManager()
 firmware_check_manager = _DisabledFirmwareCheckManager()
 firmware_download_manager = _DisabledFirmwareDownloadManager()
 firmware_history_manager = _DisabledFirmwareHistoryManager()

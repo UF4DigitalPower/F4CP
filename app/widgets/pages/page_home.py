@@ -11,7 +11,7 @@
 #  @Python  : 3.10
 # -------------------------------
 
-from PyQt5.QtCore import QSize, Qt, QUrl, pyqtSignal
+from PyQt5.QtCore import QSize, Qt, QTimer, QUrl, pyqtSignal
 from PyQt5.QtGui import QColor, QDesktopServices, QFont, QImage
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import (
@@ -40,6 +40,7 @@ from app.manager import (
     update_manager,
 )
 from app.core.utility import showMessage
+from app.core.github_release import compatible_assets
 
 FIRMWARE_KIND_TEXT = {
     "Power": "电源",
@@ -407,6 +408,8 @@ class HomePage(ScrollArea):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         StyleSheet.HOME_PAGE.apply(self)
         CTX.cfg.themeChanged.connect(self._onThemeChanged)
+        if CTX.cfg.checkUpdateAtStartUp.value:
+            QTimer.singleShot(1000, lambda: self.requestUpdateCheck(manual=False))
 
     def _onThemeChanged(self, *_):
         StyleSheet.HOME_PAGE.apply(self)
@@ -438,12 +441,12 @@ class HomePage(ScrollArea):
         return super().event(event)
 
     def requestUpdateCheck(self, manual: bool = False) -> None:
-        if self._isCheckingUpdate or update_manager.is_checking:
+        if self._isCheckingUpdate or update_manager.is_checking or update_manager.is_downloading:
             if manual:
                 showMessage(
                     self,
                     '检查中...',
-                    '已有软件更新检查正在进行中。',
+                    '已有软件更新检查或下载正在进行中。',
                     "warning",
                     True,
                     3000
@@ -566,10 +569,21 @@ class HomePage(ScrollArea):
         )
 
         dialog = MessageBox('发现软件更新', content, self.window())
-        dialog.yesButton.setText('打开发布页')
+        can_download = result.release is not None and bool(compatible_assets(result.release.assets))
+        dialog.yesButton.setText('下载更新' if can_download else '打开发布页')
         dialog.cancelButton.setText('稍后')
-        dialog.yesSignal.connect(lambda: self._openReleaseUrl(release_url))
+        if can_download:
+            dialog.yesSignal.connect(self._downloadAppUpdate)
+        else:
+            dialog.yesSignal.connect(lambda: self._openReleaseUrl(release_url))
         dialog.exec()
+
+    def _downloadAppUpdate(self) -> None:
+        window = self.window()
+        page = getattr(window, "versionInterface", None)
+        if page is not None:
+            window.switchTo(page)
+            page.softwareUpdateCard.downloadUpdate()
 
     @staticmethod
     def _formatReleaseNotes(notes: str, limit: int = 900) -> str:

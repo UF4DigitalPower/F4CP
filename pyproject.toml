@@ -16,6 +16,7 @@ authors = [
 ]
 
 dependencies = [
+    "packaging>=24.2",
     "cx-freeze>=8.7",
     "PyQt5>=5.15.2",
     "pyocd>=0.44.1",

@@ -74,6 +74,7 @@ from app.manager import (
     update_manager,
 )
 from app.widgets.components import PageHeader
+from app.widgets.components.software_update_card import SoftwareUpdateCard
 from app.widgets.icon import UF4Icon
 from config import CTX, REPO_URL, VERSION
 
@@ -206,6 +207,8 @@ class VersionPage(ScrollArea):
 
         self._initHeader()
         self._initSummary()
+        self.softwareUpdateCard = SoftwareUpdateCard(self.scrollWidget)
+        self.mainLayout.addWidget(self.softwareUpdateCard)
         self._initGithubAuthCard()
         self._initFirmwareCard()
         self._initSoftwareHistoryCard()
@@ -225,7 +228,7 @@ class VersionPage(ScrollArea):
     def _initHeader(self) -> None:
         self.header = PageHeader(
             "版本与固件",
-            "查看软件提交历史，管理远程固件版本，并打开固件提交详情。",
+            "检查并下载 GitHub 软件更新，查看提交历史和远程固件版本。",
             self.scrollWidget,
         )
         self.titleLabel = self.header.titleLabel

@@ -212,7 +212,8 @@ class F4CPConfig(QConfig):
     highDpiScaling = ConfigItem("MainWindow", "HighDpiScaling", True, BoolValidator(), restart=True)
 
     checkUpdateAtStartUp = ConfigItem("Update", "CheckUpdateAtStartUp", True, BoolValidator())
-    updateUrl = ConfigItem("Update", "UpdateUrl", "https://github.com/UF4OVER/UF4DigitalPower/releases")
+    updateUrl = ConfigItem("Update", "UpdateUrl", "https://github.com/UF4DigitalPower/F4CP/releases")
+    includePrereleases = ConfigItem("Update", "IncludePrereleases", False, BoolValidator())
 
     firmwareBaseUrl = ConfigItem("FirmwareRemote", "BaseUrl", "")
     firmwareGithubOwner = ConfigItem("FirmwareRemote", "GithubOwner", "UF4OVER")
@@ -235,10 +236,10 @@ class F4CPConfig(QConfig):
     appAuthor = ConfigItem("Application", "Author", "UF4OVER")
     appVersion = ConfigItem("Application", "Version", "1.0.0")
     appHelpUrl = ConfigItem("Application", "HelpUrl", "https://update.hepi.ng/docs/help")
-    appRepoUrl = ConfigItem("Application", "RepoUrl", "https://github.com/UF4OVER/UF4DigitalPower")
+    appRepoUrl = ConfigItem("Application", "RepoUrl", "https://github.com/UF4DigitalPower/F4CP")
     appExampleUrl = ConfigItem("Application", "ExampleUrl", "https://github.com/UF4OVER/UF4DigitalPower")
     appFeedbackUrl = ConfigItem("Application", "FeedbackUrl", "https://github.com/UF4OVER/UF4DigitalPower/issues")
-    appReleaseUrl = ConfigItem("Application", "ReleaseUrl", "https://github.com/UF4OVER/UF4DigitalPower/releases/latest")
+    appReleaseUrl = ConfigItem("Application", "ReleaseUrl", "https://github.com/UF4DigitalPower/F4CP/releases/latest")
     appZhSupportUrl = ConfigItem("Application", "ZhSupportUrl", "https://github.com/UF4OVER/UF4DigitalPower")
     appEnSupportUrl = ConfigItem("Application", "EnSupportUrl", "https://github.com/UF4OVER/UF4DigitalPower")
 
@@ -285,6 +286,14 @@ class AppContext:
             json_path.write_text("{}", encoding="utf-8")
         if json_path.exists():
             qconfig.load(str(json_path), self._qconfig)
+
+        # Migrate the former application repository while preserving custom URLs.
+        legacy_repo = "https://github.com/UF4OVER/UF4DigitalPower"
+        for item, suffix in ((self._qconfig.updateUrl, "/releases"),
+                             (self._qconfig.appRepoUrl, ""),
+                             (self._qconfig.appReleaseUrl, "/releases/latest")):
+            if item.value.rstrip("/") == legacy_repo + suffix:
+                self._qconfig.set(item, "https://github.com/UF4DigitalPower/F4CP" + suffix, save=False)
 
     # ---- properties ----
 

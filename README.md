@@ -33,9 +33,20 @@ uv run python start.py
 
 程序会加载 `app/` 下的界面和协议代码，`config/config.py` 保存本地配置。
 
-## 网站风格界面原型
+## 软件更新
 
-运行 `.\start-preview.ps1` 或 `python preview.py`，可以打开基于 me.hepi.ng 黑白 / 荧光绿风格的独立 PyQt5 原型。包含控制总览、波形、演示日志和主题设置，仅使用本地模拟数据。详细说明见 [prototype/README.md](prototype/README.md)。
+在“版本”页的“软件更新 · GitHub Release”卡片中点击“检查软件更新”。默认检查
+`UF4DigitalPower/F4CP` 的正式 Release，根据语义版本号判断是否需要更新；开发版不会被旧版 Release 降级。
+“设置 → 启动”可开启启动检查和包含预发布版本（Alpha、Beta、RC）。
+
+发现新版本后，程序按当前系统和 CPU 架构筛选附件（Windows x64 也兼容 x86 包），
+可选择附件和保存位置，并查看下载进度或取消下载。下载完成前使用临时文件，完成后校验文件大小，
+若 GitHub 提供 SHA-256 则同时校验摘要；失败或取消会清理临时文件。更新包下载完成后，请退出程序，
+手动解压或运行安装包。主页“检查更新”发现新版本时也可直接跳转下载。
+
+更新地址保存在 `src/config/config.json` 的 `Update.UpdateUrl`，支持 HTTPS GitHub 仓库、
+Release 页面或 API 地址。原先指向 `UF4OVER/UF4DigitalPower` 的默认软件地址会自动迁移；
+固件更新配置保持独立。
 
 ## 主要目录
 

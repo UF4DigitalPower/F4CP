@@ -107,6 +107,13 @@ class SettingsPage(ScrollArea):
             cfg.checkUpdateAtStartUp,
             self.behaviorGroup,
         )
+        self.prereleaseCard = SwitchSettingCard(
+            FIF.UPDATE,
+            '包含预发布版本',
+            '检查更新时同时包含 GitHub 的 Alpha、Beta、RC 预发布版本。',
+            cfg.includePrereleases,
+            self.behaviorGroup,
+        )
 
         self.scaledCard = SwitchSettingCard(
             FIF.SCROLL,
@@ -151,6 +158,7 @@ class SettingsPage(ScrollArea):
         self.appearanceGroup.addSettingCard(self.fontCard)
 
         self.behaviorGroup.addSettingCard(self.updateOnStartUpCard)
+        self.behaviorGroup.addSettingCard(self.prereleaseCard)
         self.behaviorGroup.addSettingCard(self.scaledCard)
 
 
