@@ -1,3 +1,16 @@
+# -*- coding: utf-8 -*-
+# -------------------------------
+#  @Project : F4CP
+#  @Time    : 2026 - 10-31
+#  @FileName: software_update_card.py
+#  @FileType: 软件更新卡片，展示统一版本状态并提供更新包下载入口
+#  @Software: PyCharm 2024.1.6 (Professional Edition)
+#  @System  : Windows 11 23H2
+#  @Author  : UF4
+#  @Contact :
+#  @Python  : 3.11
+# -------------------------------
+
 """Shared software Release controls for the version page and home update prompt."""
 from __future__ import annotations
 
@@ -12,7 +25,7 @@ from qfluentwidgets import (
     ProgressBar, PushButton, StrongBodyLabel, TextEdit,
 )
 
-from app.core.github_release import ReleaseError, compatible_assets, is_newer_version, validate_asset_name
+from app.core.github_release import ReleaseError, compatible_assets, validate_asset_name
 from app.core.utility import showMessage
 from app.manager.manager_update import update_manager
 
@@ -76,6 +89,7 @@ class SoftwareUpdateCard(CardWidget):
         update_manager.downloadProgress.connect(self._onProgress)
         update_manager.downloadFinished.connect(self._onDownloadFinished)
         update_manager.stateChanged.connect(self._syncState)
+        update_manager.versionsChanged.connect(self._onVersionsChanged)
         self._syncState()
 
     def checkForUpdates(self, manual: bool = True) -> None:
@@ -109,12 +123,9 @@ class SoftwareUpdateCard(CardWidget):
         for asset in self._assets:
             self.assetCombo.addItem(f"{asset.name}  ({asset.size / 1024 / 1024:.1f} MiB)")
         self.notesEdit.setPlainText(result.release_notes or "该版本未填写更新内容。")
+        message = result.snapshot.app.message
         if self._hasUpdate:
-            message = f"发现新版本 {result.release_tag}。请选择保存位置下载更新包。"
-        elif is_newer_version(result.snapshot.local_app_version, result.release_tag):
-            message = "当前运行版本高于最新 Release，无需降级。"
-        else:
-            message = "当前已是最新软件版本。"
+            message += "请选择保存位置下载更新包。"
         if not self._assets:
             message += f" 此 Release 没有适用于 {platform.system()} / {platform.machine()} 的附件，可打开发布页查看。"
         self.statusLabel.setText(message)
@@ -173,11 +184,16 @@ class SoftwareUpdateCard(CardWidget):
         self._downloadRequested = False
         self._syncState()
 
+    def _onVersionsChanged(self, snapshot) -> None:
+        release = update_manager.latest_release
+        self._hasUpdate = snapshot.app.has_update and release is not None and release.tag == snapshot.app.latest
+        self._syncState()
+
     def _syncState(self) -> None:
         checking, downloading = update_manager.is_checking, update_manager.is_downloading
         snapshot = update_manager.get_cached_versions()
         channel = "包含预发布" if update_manager.context.cfg.includePrereleases.value else "正式发布"
-        self.versionLabel.setText(f"当前：{snapshot.local_app_version}  |  最新发布：{snapshot.latest_app_version or '--'}  |  {platform.system()} / {platform.machine()}  |  {channel}")
+        self.versionLabel.setText(f"当前：{snapshot.app.current or '--'}  |  最新发布：{snapshot.app.latest or '--'}  |  {platform.system()} / {platform.machine()}  |  {channel}")
         self.checkButton.setEnabled(not checking and not downloading)
         self.checkButton.setText("检查中…" if checking else "检查软件更新")
         self.assetCombo.setEnabled(not checking and not downloading and bool(self._assets))

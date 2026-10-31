@@ -14,7 +14,7 @@
 """Public configuration API, shared by both legacy and focused imports."""
 from . import config as _compat
 from .constants import *
-from .context import CTX, AppContext, AppIconPath, cfg
+from .context import CTX, AppContext, AppIconPath, cfg, version_manager
 from .logging import configure_logging, get_logger, logger
 from .paths import DirPaths
 from .schema import F4CPConfig

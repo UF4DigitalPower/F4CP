@@ -14,20 +14,24 @@
 """Compatibility facade; implementation lives in focused config submodules."""
 from . import constants as _constants
 from .constants import *
-from .context import CTX, AppContext, AppIconPath, cfg
+from .context import CTX, AppContext, AppIconPath, cfg, version_manager
 from .logging import configure_logging, get_logger, logger
 from .paths import DirPaths
 from .schema import F4CPConfig
 from .storage import ConfigLoadError
+from .versions import VersionManager
 
 __all__ = [
     "CTX", "AppContext", "DirPaths", "F4CPConfig", "cfg", "AppIconPath",
     "logger", "get_logger", "configure_logging", "ConfigLoadError",
+    "VersionManager", "version_manager",
     *_constants.__all__, *_constants.APPLICATION_EXPORTS,
 ]
 
 
 def __getattr__(name: str):
+    if name == "VERSION":
+        return version_manager.snapshot().app.current
     attribute = _constants.APPLICATION_EXPORTS.get(name)
     if attribute is not None:
         return getattr(cfg, attribute).value

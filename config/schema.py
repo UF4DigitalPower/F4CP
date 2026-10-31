@@ -50,16 +50,15 @@ class F4CPConfig(QConfig):
     githubProfileUrl = ConfigItem("GithubAuth", "ProfileUrl", "")
     githubSessionExpiresAt = ConfigItem("GithubAuth", "SessionExpiresAt", 0)
 
-    localAppVersion = ConfigItem(keys.VERSION_LOCAL_SECTION, "OldLocalVersion", "")
-    localUpperVersion = ConfigItem(keys.VERSION_LOCAL_SECTION, "OldUpperVersion", "")
-    localLowerVersion = ConfigItem(keys.VERSION_LOCAL_SECTION, "OldLowerVersion", "")
-    latestAppVersion = ConfigItem(keys.VERSION_REMOTE_SECTION, "NewLocalVersion", "1.1.0.RC1")
-    latestUpperVersion = ConfigItem(keys.VERSION_REMOTE_SECTION, "NewUpperVersion", "v0.0.0")
-    latestLowerVersion = ConfigItem(keys.VERSION_REMOTE_SECTION, "NewLowerVersion", "v0.0.0")
+    currentAppVersion = ConfigItem(keys.VERSION_CURRENT_SECTION, "App", "")
+    currentPowerVersion = ConfigItem(keys.VERSION_CURRENT_SECTION, "Power", "")
+    currentUpperVersion = ConfigItem(keys.VERSION_CURRENT_SECTION, "Upper", "")
+    latestAppVersion = ConfigItem(keys.VERSION_LATEST_SECTION, "App", "")
+    latestPowerVersion = ConfigItem(keys.VERSION_LATEST_SECTION, "Power", "")
+    latestUpperVersion = ConfigItem(keys.VERSION_LATEST_SECTION, "Upper", "")
 
     appYear = ConfigItem("Application", "Year", 2026)
     appAuthor = ConfigItem("Application", "Author", "UF4OVER")
-    appVersion = ConfigItem("Application", "Version", "1.0.0")
     appHelpUrl = ConfigItem("Application", "HelpUrl", "https://update.hepi.ng/docs/help")
     appRepoUrl = ConfigItem("Application", "RepoUrl", keys.APP_REPOSITORY_URL)
     appExampleUrl = ConfigItem("Application", "ExampleUrl", "https://github.com/UF4OVER/UF4DigitalPower")
@@ -74,6 +73,27 @@ class F4CPConfig(QConfig):
     # DAPLink 下载工具路径（留空时自动探测）
     daplinkUf4TargetExe = ConfigItem("Daplink", "Uf4TargetExe", "")
     daplinkOpenocdExe = ConfigItem("Daplink", "OpenocdExe", "")
+
+    # Compatibility aliases refer to the same items, never additional JSON fields.
+    @property
+    def appVersion(self):
+        return self.currentAppVersion
+
+    @property
+    def localAppVersion(self):
+        return self.currentAppVersion
+
+    @property
+    def localLowerVersion(self):
+        return self.currentPowerVersion
+
+    @property
+    def localUpperVersion(self):
+        return self.currentUpperVersion
+
+    @property
+    def latestLowerVersion(self):
+        return self.latestPowerVersion
 
     def __init__(self):
         super().__init__()
@@ -168,5 +188,7 @@ def bind_global_config(config: F4CPConfig) -> None:
     qconfig.toDict = config.toDict
     for name, item in config._items.items():
         setattr(qconfig, name, item)
+    for name in ("appVersion", "localAppVersion", "localLowerVersion", "localUpperVersion", "latestLowerVersion"):
+        setattr(qconfig, name, getattr(config, name))
     for name in signals:
         getattr(config, name).connect(getattr(qconfig, name))

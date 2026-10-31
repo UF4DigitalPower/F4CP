@@ -20,7 +20,10 @@ import tempfile
 from copy import deepcopy
 from pathlib import Path
 
-from .constants import APP_REPOSITORY_URL, LEGACY_APP_REPOSITORY_URL, UPDATE_SECTION
+from .constants import (
+    APP_REPOSITORY_URL, LEGACY_APP_REPOSITORY_URL, UPDATE_SECTION,
+    VERSION_CURRENT_SECTION, VERSION_LATEST_SECTION,
+)
 
 
 class ConfigLoadError(ValueError):
@@ -65,6 +68,32 @@ class JsonConfigStore:
 def migrate_config(data: dict) -> dict:
     """Migrate former defaults only; preserve custom URLs, firmware and unknown keys."""
     data = deepcopy(data)
+    for legacy_group, target_group, mappings in (
+        ("OldVersion", VERSION_CURRENT_SECTION,
+         {"OldLocalVersion": "App", "OldLowerVersion": "Power", "OldUpperVersion": "Upper"}),
+        ("NewVersion", VERSION_LATEST_SECTION,
+         {"NewLocalVersion": "App", "NewLowerVersion": "Power", "NewUpperVersion": "Upper"}),
+    ):
+        section = data.get(legacy_group)
+        if not isinstance(section, dict):
+            continue
+        current = data.setdefault(target_group, {})
+        if not isinstance(current, dict):
+            continue
+        # Application.Version was previously the displayed/running software version.
+        application = data.get("Application", {})
+        if target_group == VERSION_CURRENT_SECTION and isinstance(application, dict) and "Version" in application:
+            current.setdefault("App", application["Version"])
+        for old_key, new_key in mappings.items():
+            if old_key in section:
+                current.setdefault(new_key, section.pop(old_key))
+        if not section:
+            del data[legacy_group]
+    application = data.get("Application")
+    if isinstance(application, dict) and "Version" in application:
+        current = data.setdefault(VERSION_CURRENT_SECTION, {})
+        if isinstance(current, dict):
+            current.setdefault("App", application.pop("Version"))
     legacy_update = data.get("update")
     if isinstance(legacy_update, dict):
         current = data.get(UPDATE_SECTION)

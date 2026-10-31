@@ -1,9 +1,22 @@
+# -*- coding: utf-8 -*-
+# -------------------------------
+#  @Project : F4CP
+#  @Time    : 2026 - 10-31
+#  @FileName: manager_update.py
+#  @FileType: 软件更新管理器，负责异步检查、版本缓存同步和下载任务
+#  @Software: PyCharm 2024.1.6 (Professional Edition)
+#  @System  : Windows 11 23H2
+#  @Author  : UF4
+#  @Contact :
+#  @Python  : 3.11
+# -------------------------------
+
 """Qt bridge for GitHub software updates; network and disk I/O run off the GUI thread."""
 from __future__ import annotations
 
 import threading
 import weakref
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from PyQt5 import sip
@@ -16,22 +29,12 @@ from app.core.github_release import (
     compatible_assets,
     download_asset,
     fetch_release,
-    is_newer_version,
     network_error,
 )
+from app.version import VersionComponent, VersionSnapshot
 from config import CTX, get_logger
 
 logger = get_logger("SoftwareUpdate")
-
-
-@dataclass(frozen=True)
-class VersionSnapshot:
-    local_app_version: str = ""
-    latest_app_version: str = ""
-    local_lower_version: str = ""
-    latest_lower_version: str = ""
-    local_upper_version: str = ""
-    latest_upper_version: str = ""
 
 
 @dataclass(frozen=True)
@@ -68,12 +71,15 @@ class UpdateManager(QObject):
     downloadProgress = pyqtSignal(object, object)
     downloadFinished = pyqtSignal(object)
     stateChanged = pyqtSignal()
+    versionsChanged = pyqtSignal(object)
     _checkReady = pyqtSignal(object)
     _downloadReady = pyqtSignal(object)
 
     def __init__(self, context=CTX):
         super().__init__()
         self.context = context
+        self.versions = context.versions
+        self.versions.changed.connect(self.versionsChanged)
         self.is_checking = False
         self.is_downloading = False
         self.latest_release: SoftwareRelease | None = None
@@ -86,15 +92,7 @@ class UpdateManager(QObject):
         self._downloadReady.connect(self._finish_download, Qt.QueuedConnection)
 
     def get_cached_versions(self) -> VersionSnapshot:
-        cfg = self.context.cfg
-        return VersionSnapshot(
-            local_app_version=cfg.appVersion.value,
-            latest_app_version=cfg.latestAppVersion.value,
-            local_lower_version=cfg.localLowerVersion.value,
-            latest_lower_version=cfg.latestLowerVersion.value,
-            local_upper_version=cfg.localUpperVersion.value,
-            latest_upper_version=cfg.latestUpperVersion.value,
-        )
+        return self.versions.snapshot()
 
     def check_for_updates(self, parent=None, manual: bool = True) -> bool:
         if self.is_checking or self.is_downloading:
@@ -111,14 +109,11 @@ class UpdateManager(QObject):
         def run():
             try:
                 release = fetch_release(repository, include_prereleases)
+                updated = snapshot.with_latest(VersionComponent.APP, release.tag)
                 result = UpdateCheckResult(
                     success=True, manual=manual,
-                    has_changes=is_newer_version(release.tag, snapshot.local_app_version),
-                    snapshot=VersionSnapshot(
-                        local_app_version=snapshot.local_app_version, latest_app_version=release.tag,
-                        local_lower_version=snapshot.local_lower_version, latest_lower_version=snapshot.latest_lower_version,
-                        local_upper_version=snapshot.local_upper_version, latest_upper_version=snapshot.latest_upper_version,
-                    ),
+                    has_changes=updated.app.has_update,
+                    snapshot=updated, message=updated.app.message,
                     release_tag=release.tag, release_url=release.url, release_notes=release.notes, release=release,
                 )
             except Exception as exc:
@@ -133,11 +128,14 @@ class UpdateManager(QObject):
         self.is_checking = False
         self.latest_release = result.release if result.success else None
         if result.success:
-            cfg = self.context.cfg
             try:
-                cfg.set(cfg.latestAppVersion, result.release_tag, save=True)
-            except OSError as exc:
+                self.versions.set_latest(VersionComponent.APP, result.release_tag)
+            except (OSError, ValueError) as exc:
                 logger.warning("Could not save latest software version: %s", exc)
+                self.versions.set_latest(VersionComponent.APP, result.release_tag, save=False)
+            snapshot = self.versions.snapshot()
+            result = replace(result, snapshot=snapshot, has_changes=snapshot.app.has_update,
+                             message=snapshot.app.message)
         target = self._check_target() if self._check_target else None
         self._check_target = None
         self.stateChanged.emit()
@@ -147,6 +145,9 @@ class UpdateManager(QObject):
 
     def download_update(self, asset: ReleaseAsset, destination: Path) -> bool:
         if self.is_downloading or self.is_checking or self.latest_release is None:
+            return False
+        current = self.versions.snapshot().app
+        if not current.has_update or current.latest != self.latest_release.tag:
             return False
         if asset not in compatible_assets(self.latest_release.assets):
             return False

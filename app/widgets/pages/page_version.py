@@ -76,7 +76,7 @@ from app.manager import (
 from app.widgets.components import PageHeader
 from app.widgets.components.software_update_card import SoftwareUpdateCard
 from app.widgets.icon import UF4Icon
-from config import CTX, REPO_URL, VERSION
+from config import CTX, REPO_URL
 
 
 @dataclass(frozen=True)
@@ -219,6 +219,7 @@ class VersionPage(ScrollArea):
 
         self._connectSignals()
         self._applyVersionSnapshot()
+        update_manager.versionsChanged.connect(self._applyVersionSnapshot)
         self._reloadGitCommits()
         StyleSheet.VERSION_PAGE.apply(self)
         self._applyLocalStyle()
@@ -245,7 +246,7 @@ class VersionPage(ScrollArea):
         layout.setHorizontalSpacing(12)
         layout.setVerticalSpacing(12)
 
-        self.appVersionCard = VersionInfoCard("软件版本", VERSION, "当前运行的 F4CP 上位机版本", summary)
+        self.appVersionCard = VersionInfoCard("软件版本", CTX.versions.snapshot().app.current, "当前 / 最新发布版本", summary)
         self.powerVersionCard = VersionInfoCard("Power 固件", "--", "本地 / 远程最新版本", summary)
         self.upperVersionCard = VersionInfoCard("Upper 固件", "--", "本地 / 远程最新版本", summary)
         layout.addWidget(self.appVersionCard, 0, 0)
@@ -708,9 +709,9 @@ class VersionPage(ScrollArea):
             commits.append(GitCommitItem(parts[0], parts[1], parts[2], parts[3]))
         return commits
 
-    def _applyVersionSnapshot(self) -> None:
-        snapshot = update_manager.get_cached_versions()
-        self.appVersionCard.setValue(snapshot.local_app_version or VERSION)
+    def _applyVersionSnapshot(self, snapshot=None) -> None:
+        snapshot = snapshot or update_manager.get_cached_versions()
+        self.appVersionCard.setValue(f"{snapshot.app.current or '--'} / {snapshot.app.latest or '--'}")
         self.powerVersionCard.setValue(f"{snapshot.local_lower_version or '--'} / {snapshot.latest_lower_version or '--'}")
         self.upperVersionCard.setValue(f"{snapshot.local_upper_version or '--'} / {snapshot.latest_upper_version or '--'}")
 

@@ -20,6 +20,7 @@ from .logging import configure_logging, get_logger
 from .paths import DirPaths
 from .schema import F4CPConfig, bind_global_config
 from .storage import ConfigLoadError, JsonConfigStore
+from .versions import VersionManager
 
 _log = get_logger("Config")
 
@@ -34,6 +35,7 @@ class AppContext:
             configure_logging(self._dirs.LogDir)
         self._qconfig = F4CPConfig()
         self._qconfig.file = self._dirs.ConfigJsonPath
+        self._versions = VersionManager(self)
         self.last_load_error: OSError | ConfigLoadError | None = None
         if not self._qconfig.file.exists():
             JsonConfigStore(self._qconfig.file).write({})
@@ -58,10 +60,16 @@ class AppContext:
     def app_icon_path(self) -> str:
         return self._dirs.AppIconPath
 
+    @property
+    def versions(self) -> VersionManager:
+        return self._versions
+
     def reload(self) -> bool:
         """Reload in place, retaining signals and settings if the file is invalid."""
         try:
-            self._qconfig.load()
+            with self._versions.batch():
+                self._qconfig.load()
+                self._versions.refresh_application()
         except (OSError, ConfigLoadError) as exc:
             self.last_load_error = exc
             _log.warning("Could not reload configuration: %s", exc)
@@ -75,4 +83,5 @@ class AppContext:
 
 CTX = AppContext(bind_global=True)
 cfg = CTX.cfg
+version_manager = CTX.versions
 AppIconPath = CTX.app_icon_path

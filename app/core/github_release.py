@@ -1,3 +1,16 @@
+# -*- coding: utf-8 -*-
+# -------------------------------
+#  @Project : F4CP
+#  @Time    : 2026 - 10-31
+#  @FileName: github_release.py
+#  @FileType: GitHub 发布模块，负责 Release 查询、附件匹配和安全下载
+#  @Software: PyCharm 2024.1.6 (Professional Edition)
+#  @System  : Windows 11 23H2
+#  @Author  : UF4
+#  @Contact :
+#  @Python  : 3.11
+# -------------------------------
+
 """GitHub Release discovery and verified, atomic asset downloads (no Qt dependency)."""
 from __future__ import annotations
 
@@ -16,7 +29,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
-from packaging.version import InvalidVersion, Version
+from app.version import Version, VersionError, parse_version as _parse_version
 
 
 DEFAULT_REPOSITORY = "https://github.com/UF4DigitalPower/F4CP"
@@ -72,9 +85,9 @@ def repository_slug(url: str) -> str:
 
 def parse_version(value: str) -> Version:
     try:
-        return Version(value.strip())
-    except InvalidVersion as exc:
-        raise ReleaseError(f"无法识别版本号：{value}。请使用 v2.0.0、2.0.0.A1 或 2.0.0.RC1 等格式。") from exc
+        return _parse_version(value)
+    except VersionError as exc:
+        raise ReleaseError(str(exc)) from exc
 
 
 def is_newer_version(remote: str, local: str) -> bool:

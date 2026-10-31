@@ -16,6 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from PyQt5.QtCore import QEvent, QThread, pyqtSignal
+from config import version_manager
 
 from .manager_font import *
 from .manager_stylesheet import *

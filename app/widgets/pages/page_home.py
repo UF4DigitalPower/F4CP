@@ -41,6 +41,7 @@ from app.manager import (
 )
 from app.core.utility import showMessage
 from app.core.github_release import compatible_assets
+from app.version import VersionState
 
 FIRMWARE_KIND_TEXT = {
     "Power": "电源",
@@ -402,6 +403,7 @@ class HomePage(ScrollArea):
         )
 
         self._applyVersionSnapshot(update_manager.get_cached_versions())
+        update_manager.versionsChanged.connect(self._applyVersionSnapshot)
 
         self.setWidget(self.scrollWidget)
         self.setWidgetResizable(True)
@@ -542,8 +544,8 @@ class HomePage(ScrollArea):
             showMessage(
                 self,
                 '更新检查完成',
-                '当前已是最新软件版本。',
-                "success",
+                result.snapshot.app.message,
+                "warning" if result.snapshot.app.state in {VersionState.UNKNOWN, VersionState.INVALID} else "success",
             )
             return
 

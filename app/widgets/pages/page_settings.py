@@ -17,7 +17,7 @@ from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget
 
-from config import AUTHOR, CTX, FEEDBACK_URL, HELP_URL, VERSION, YEAR, cfg
+from config import AUTHOR, CTX, FEEDBACK_URL, HELP_URL, YEAR, cfg
 from app.widgets.components import PageHeader
 from app.manager import (
     FontOption,
@@ -89,6 +89,7 @@ class SettingsPage(ScrollArea):
         self.expandLayout = ExpandLayout(self.scrollWidget)
         self._fontOptions: list[FontOption] = []
         self._fontOptionsLoaded = False
+        app_version = CTX.versions.snapshot().app.current or "--"
 
         self.header = PageHeader("设置", "应用外观、启动行为和项目信息。", self.scrollWidget)
         self.settingLabel = self.header.titleLabel
@@ -124,13 +125,13 @@ class SettingsPage(ScrollArea):
         )
 
         self.projectGroup = SettingCardGroup('项目', self.scrollWidget)
-        self.versionCard = ReadonlyInfoCard(FIF.INFO, '当前版本', 'F4CP 上位机版本信息', VERSION, self.projectGroup)
+        self.versionCard = ReadonlyInfoCard(FIF.INFO, '当前版本', 'F4CP 上位机版本信息', app_version, self.projectGroup)
         self.authorCard = ReadonlyInfoCard(FIF.PEOPLE, '维护者', '项目作者与维护信息', AUTHOR, self.projectGroup)
 
         self.supportGroup = SettingCardGroup('支持', self.scrollWidget)
         self.helpCard = HyperlinkCard(HELP_URL, '打开帮助文档', FIF.HELP, '帮助文档', '查看使用说明、连接流程和常见问题。', self.supportGroup)
         self.feedbackCard = PrimaryPushSettingCard('提交反馈', FIF.FEEDBACK, '问题反馈', '遇到异常或有改进建议时，可以提交 issue 或反馈。', self.supportGroup)
-        self.aboutCard = PrimaryPushSettingCard('查看项目说明', FIF.INFO, '关于 UF4DigitalPower', f'版权所有 {YEAR}，{AUTHOR}。版本 {VERSION}', self.supportGroup)
+        self.aboutCard = PrimaryPushSettingCard('查看项目说明', FIF.INFO, '关于 UF4DigitalPower', f'版权所有 {YEAR}，{AUTHOR}。版本 {app_version}', self.supportGroup)
 
         self.__initWidget()
 
@@ -151,6 +152,7 @@ class SettingsPage(ScrollArea):
         StyleSheet.SETTINGS_PAGE.apply(self)
         self.__setCustomColorCardTexts('主题色', '调整应用的主色调')
         CTX.cfg.themeChanged.connect(self._onThemeChanged)
+        CTX.versions.changed.connect(self._onVersionsChanged)
 
     def __initLayout(self):
         self.appearanceGroup.addSettingCard(self.themeCard)
@@ -205,8 +207,13 @@ class SettingsPage(ScrollArea):
         super().showEvent(event)
         self.__refreshFontOptions()
         self.__refreshThemeOptions()
-        self.versionCard.setValue(VERSION)
+        self._onVersionsChanged(CTX.versions.snapshot())
         self.authorCard.setValue(AUTHOR)
+
+    def _onVersionsChanged(self, snapshot) -> None:
+        version = snapshot.app.current or "--"
+        self.versionCard.setValue(version)
+        self.aboutCard.setContent(f'版权所有 {YEAR}，{AUTHOR}。版本 {version}')
 
     def __showRestartTooltip(self):
         InfoBar.success('已保存', '请重启应用以完全应用改动', duration=1500, parent=self)
