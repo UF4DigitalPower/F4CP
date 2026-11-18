@@ -10,9 +10,7 @@ class ThemeBackgroundMixin:
     """Theme and Fluent background refresh coordination."""
 
     def initThemeBackground(self) -> None:
-        # Use the Fluent opaque surface for reliable palette changes and
-        # rendering on the supported Qt 5.15 Windows runtime.
-        self.setMicaEffectEnabled(False)
+        self.setMicaEffectEnabled(bool(getattr(cfg.micaEnabled, "value", False)))
         self.refreshTheme()
         cfg.themeChanged.connect(self.refreshTheme)
 

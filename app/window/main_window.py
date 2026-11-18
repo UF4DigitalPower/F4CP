@@ -41,14 +41,19 @@ class Window(WindowShellMixin, NavigationMixin, ThemeBackgroundMixin, MSFluentWi
 
     def closeEvent(self, event):
         from PyQt5.QtWidgets import QMessageBox
-        if self.homeInterface._upgrading:
-            if not self.homeInterface._can_cancel:
-                QMessageBox.information(self, "正在确认安装", "请等待固件安装及重连确认完成后退出。")
+        if self.firmwareInterface._active:
+            if not self.firmwareInterface._can_cancel:
+                QMessageBox.information(self, "正在下载固件", "请等待固件烧录、校验及安装确认完成后退出。")
                 event.ignore()
                 return
             if QMessageBox.question(self, "退出 F4CP", "退出会取消当前固件上传，是否继续？") != QMessageBox.Yes:
                 event.ignore()
                 return
+            # Cancel cooperatively: a queued phase signal may lag behind the
+            # worker entering its non-cancellable commit/programming phase.
+            self.firmwareInterface._cancel()
+            event.ignore()
+            return
         if not self.homeInterface.shutdown():
             event.ignore()
             return

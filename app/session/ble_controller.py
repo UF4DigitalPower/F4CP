@@ -56,7 +56,7 @@ class BleController(QThread):
             try:
                 await getattr(self, "_" + action)(*args)
             except UploadCancelled:
-                self.message.emit("升级已取消，设备继续运行原固件")
+                self.result.emit(False, "下载已取消，未提交安装或目标烧录")
             except Exception as exc:
                 self.result.emit(False, str(exc))
             finally:
@@ -109,6 +109,11 @@ class BleController(QThread):
             await self._exchange(b"\x00")
         except Exception as exc:
             self.message.emit(f"升级已确认，刷新存储信息失败：{exc}，可手动重新读取")
+
+    async def _target_upload(self, image):
+        from app.protocol.target_update import upload
+        await upload(self.device, image, self._cancel.is_set, self.progress.emit, self.phase.emit)
+        self.result.emit(True, "G474 烧录完成，设备已读回校验长度与 CRC32 并复位运行")
 
     def cancel(self):
         self._cancel.set()

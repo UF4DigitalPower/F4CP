@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QWidget
 from qfluentwidgets import FluentIconBase, NavigationItemPosition
 
 from app.widgets.icon import UF4Icon
-from app.widgets.pages import HomePage, SettingsPage, VersionPage, ProfilePage
+from app.widgets.pages import HomePage, SettingsPage, VersionPage, ProfilePage, FirmwarePage
 
 
 @dataclass(frozen=True)
@@ -23,6 +23,7 @@ class NavigationEntry:
 
 NAVIGATION_ENTRIES = (
     NavigationEntry("homeNavItem", "homeInterface", UF4Icon.GAUGE, "首页", UF4Icon.GAUGE_FILL),
+    NavigationEntry("firmwareNavItem", "firmwareInterface", UF4Icon.FLASH, "固件下载", UF4Icon.FLASH_FILL),
     NavigationEntry("versionNavItem", "versionInterface", UF4Icon.CLOUD_ARROW_DOWN, "软件更新", UF4Icon.CLOUD_ARROW_DOWN_FILL),
     NavigationEntry("profileNavItem", "profileInterface", UF4Icon.BOARD, "个人", UF4Icon.BOARD, NavigationItemPosition.BOTTOM),
     NavigationEntry("settingNavItem", "settingInterface", UF4Icon.SERVER, "设置", UF4Icon.SERVER_FILL, NavigationItemPosition.BOTTOM),
@@ -34,6 +35,7 @@ class NavigationMixin:
 
     def createPages(self) -> None:
         self.homeInterface = HomePage(self)
+        self.firmwareInterface = FirmwarePage(self.homeInterface, self)
         self.versionInterface = VersionPage(self)
         self.settingInterface = SettingsPage(self)
         self.profileInterface = ProfilePage(self)

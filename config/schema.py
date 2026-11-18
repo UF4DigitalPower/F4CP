@@ -18,7 +18,8 @@ import sys
 from copy import deepcopy
 from pathlib import Path
 
-from qfluentwidgets import BoolValidator, ColorConfigItem, ConfigItem, QConfig, qconfig
+from qfluentwidgets import (BoolValidator, ColorConfigItem, ConfigItem, EnumSerializer,
+                           OptionsConfigItem, OptionsValidator, QConfig, Theme, qconfig)
 
 from . import constants as keys
 from .logging import get_logger
@@ -33,6 +34,9 @@ def _is_win11() -> bool:
 
 class F4CPConfig(QConfig):
     """Keep Qt signals and JSON keys stable without sharing ConfigItem objects."""
+    themeMode = OptionsConfigItem("QFluentWidgets", "ThemeMode", Theme.DARK,
+                                  OptionsValidator(Theme), EnumSerializer(Theme))
+    themeColor = ColorConfigItem("QFluentWidgets", "ThemeColor", "#ffff1010")
     micaEnabled = ConfigItem("MainWindow", "MicaEnabled", _is_win11(), BoolValidator())
     highDpiScaling = ConfigItem("MainWindow", "HighDpiScaling", True, BoolValidator(), restart=True)
 

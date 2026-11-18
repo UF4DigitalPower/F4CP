@@ -27,8 +27,15 @@ from app.window import Window
 class Application(Window):
     def __init__(self):
         super().__init__()
-        self.resize(1200, 900)
+        self.resize(1500, 1000)
         self.setMinimumSize(1200, 900)
+        # 窗口居中
+        self.center()
+    def center(self):
+        screen = QApplication.primaryScreen()
+        geometry = screen.availableGeometry()
+        self.move((geometry.width() - self.width()) // 2, (geometry.height() - self.height()) // 2)
+
     def close(self):
         logger.warning("Application closed")
         super().close()
