@@ -11,7 +11,7 @@
 #  @Python  : 3.11
 # -------------------------------
 
-"""Shared software Release controls for the version page and home update prompt."""
+"""Software Release notes and downloads, embedded in the home application card."""
 from __future__ import annotations
 
 import platform
@@ -19,19 +19,20 @@ from pathlib import Path
 
 from PyQt5.QtCore import QStandardPaths, QUrl
 from PyQt5.QtGui import QDesktopServices
-from PyQt5.QtWidgets import QFileDialog, QHBoxLayout, QVBoxLayout
+from PyQt5.QtWidgets import QFileDialog, QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import (
     CaptionLabel, CardWidget, ComboBox, FluentIcon as FIF, PrimaryPushButton,
-    ProgressBar, PushButton, StrongBodyLabel, TextEdit,
+    ProgressBar, PushButton, StrongBodyLabel, TextEdit, setCustomStyleSheet,
 )
 
 from app.core.github_release import ReleaseError, compatible_assets, validate_asset_name
 from app.core.utility import showMessage
 from app.manager.manager_update import update_manager
+from app.version import parse_version, VersionError
 
 
 class SoftwareUpdateCard(CardWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, embedded=False):
         super().__init__(parent)
         self._hasUpdate = False
         self._assets = []
@@ -40,29 +41,43 @@ class SoftwareUpdateCard(CardWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(20, 18, 20, 20)
         layout.setSpacing(10)
-        layout.addWidget(StrongBodyLabel("软件更新 · GitHub Release", self))
+        header = QHBoxLayout()
+        self.notesTitleLabel = StrongBodyLabel(self)
+        header.addWidget(self.notesTitleLabel)
+        header.addStretch(1)
+        self.releaseButton = PushButton(FIF.LINK, "查看发布页", self)
+        self.releaseButton.clicked.connect(self._openRelease)
+        header.addWidget(self.releaseButton)
+        layout.addLayout(header)
         self.versionLabel = CaptionLabel(self)
         self.versionLabel.setWordWrap(True)
         layout.addWidget(self.versionLabel)
 
         row = QHBoxLayout()
         self.checkButton = PushButton(FIF.SYNC, "检查软件更新", self)
-        self.releaseButton = PushButton(FIF.LINK, "打开发布页", self)
-        self.releaseButton.clicked.connect(self._openRelease)
         self.checkButton.clicked.connect(lambda: self.checkForUpdates())
         row.addWidget(self.checkButton)
-        row.addWidget(self.releaseButton)
         row.addStretch(1)
-        layout.addLayout(row)
+        if embedded:
+            self.checkButton.hide()
+        else:
+            layout.addLayout(row)
 
         self.notesEdit = TextEdit(self)
+        self.notesEdit.setObjectName("releaseNotes")
         self.notesEdit.setReadOnly(True)
-        self.notesEdit.setPlaceholderText("检查更新后显示 Release 更新说明。")
-        self.notesEdit.setFixedHeight(150)
+        self.notesEdit.setFixedHeight(155)
+        self.notesEdit.layer.hide()
+        selector = "TextEdit#releaseNotes, TextEdit#releaseNotes:hover, TextEdit#releaseNotes:focus"
+        setCustomStyleSheet(self.notesEdit,
+                            selector + " { color: #202020; background: transparent; border: none; }",
+                            selector + " { color: #f2f2f2; background: transparent; border: none; }")
         layout.addWidget(self.notesEdit)
 
-        downloadRow = QHBoxLayout()
-        self.assetCombo = ComboBox(self)
+        self.downloadPanel = QWidget(self)
+        downloadRow = QHBoxLayout(self.downloadPanel)
+        downloadRow.setContentsMargins(0, 0, 0, 0)
+        self.assetCombo = ComboBox(self.downloadPanel)
         self.assetCombo.setMinimumWidth(240)
         self.downloadButton = PrimaryPushButton(FIF.DOWNLOAD, "下载更新包", self)
         self.cancelButton = PushButton(FIF.CLOSE, "取消下载", self)
@@ -74,14 +89,14 @@ class SoftwareUpdateCard(CardWidget):
         downloadRow.addWidget(self.downloadButton)
         downloadRow.addWidget(self.cancelButton)
         downloadRow.addWidget(self.openFolderButton)
-        layout.addLayout(downloadRow)
+        layout.addWidget(self.downloadPanel)
 
         self.progressBar = ProgressBar(self)
         self.progressBar.setRange(0, 100)
         self.progressBar.setValue(0)
         self.progressBar.hide()
         layout.addWidget(self.progressBar)
-        self.statusLabel = CaptionLabel("点击检查更新，将按当前系统和架构匹配发布文件。", self)
+        self.statusLabel = CaptionLabel("点击上方“检查更新”获取新版本。" if embedded else "点击检查更新获取新版本。", self)
         self.statusLabel.setWordWrap(True)
         layout.addWidget(self.statusLabel)
 
@@ -90,7 +105,29 @@ class SoftwareUpdateCard(CardWidget):
         update_manager.downloadFinished.connect(self._onDownloadFinished)
         update_manager.stateChanged.connect(self._syncState)
         update_manager.versionsChanged.connect(self._onVersionsChanged)
+        self._showReleaseNotes()
         self._syncState()
+
+    def _showReleaseNotes(self, release=None, snapshot=None) -> None:
+        snapshot = snapshot or update_manager.get_cached_versions()
+        current = snapshot.app.current or "--"
+        try:
+            comparison = (parse_version(release.tag) > parse_version(current)) if release else False
+            same_version = release is not None and parse_version(release.tag) == parse_version(current)
+        except VersionError:
+            comparison = same_version = False
+        if comparison or (same_version and release.notes):
+            self.notesTitleLabel.setText(f"{'新版本介绍' if comparison else '此版本介绍'} · {release.tag}")
+            notes = release.notes or "此版本尚未提供更新说明，可前往发布页查看。"
+        else:
+            self.notesTitleLabel.setText(f"此版本介绍 · {current}")
+            path = update_manager.context.dirs.AssetsDir / "f4cp-release-notes.md"
+            try:
+                notes = path.read_text(encoding="utf-8")
+            except OSError:
+                notes = "此版本未附带介绍。检查更新后可查看发布说明。"
+        self.notesEdit.setMarkdown(notes)
+        self.notesEdit.moveCursor(self.notesEdit.textCursor().Start)
 
     def checkForUpdates(self, manual: bool = True) -> None:
         if update_manager.check_for_updates(manual=manual):
@@ -98,7 +135,6 @@ class SoftwareUpdateCard(CardWidget):
             self._hasUpdate = False
             self._assets = []
             self.assetCombo.clear()
-            self.notesEdit.clear()
             self.progressBar.hide()
             self.statusLabel.setText("正在连接 GitHub，读取最新 Release…")
             self._syncState()
@@ -110,7 +146,7 @@ class SoftwareUpdateCard(CardWidget):
             self._hasUpdate = False
             self._assets = []
             self.assetCombo.clear()
-            self.notesEdit.clear()
+            self._showReleaseNotes()
             self.statusLabel.setText(result.message)
             if self._manualCheck:
                 showMessage(self, "检查更新失败", result.message, "warning")
@@ -122,7 +158,7 @@ class SoftwareUpdateCard(CardWidget):
         self.assetCombo.clear()
         for asset in self._assets:
             self.assetCombo.addItem(f"{asset.name}  ({asset.size / 1024 / 1024:.1f} MiB)")
-        self.notesEdit.setPlainText(result.release_notes or "该版本未填写更新内容。")
+        self._showReleaseNotes(result.release, result.snapshot)
         message = result.snapshot.app.message
         if self._hasUpdate:
             message += "请选择保存位置下载更新包。"
@@ -193,7 +229,7 @@ class SoftwareUpdateCard(CardWidget):
         checking, downloading = update_manager.is_checking, update_manager.is_downloading
         snapshot = update_manager.get_cached_versions()
         channel = "包含预发布" if update_manager.context.cfg.includePrereleases.value else "正式发布"
-        self.versionLabel.setText(f"当前：{snapshot.app.current or '--'}  |  最新发布：{snapshot.app.latest or '--'}  |  {platform.system()} / {platform.machine()}  |  {channel}")
+        self.versionLabel.setText(f"当前版本 {snapshot.app.current or '--'}  ·  最新发布 {snapshot.app.latest or '--'}  ·  {channel}")
         self.checkButton.setEnabled(not checking and not downloading)
         self.checkButton.setText("检查中…" if checking else "检查软件更新")
         self.assetCombo.setEnabled(not checking and not downloading and bool(self._assets))
@@ -201,6 +237,9 @@ class SoftwareUpdateCard(CardWidget):
         self.cancelButton.setVisible(downloading)
         self.cancelButton.setEnabled(downloading)
         self.openFolderButton.setVisible(update_manager.last_download is not None)
+        self.downloadPanel.setVisible((self._hasUpdate and bool(self._assets)) or downloading or update_manager.last_download is not None)
+        self.assetCombo.setVisible(self._hasUpdate and bool(self._assets))
+        self.downloadButton.setVisible(self._hasUpdate and bool(self._assets))
         self.releaseButton.setEnabled(not checking)
 
     def _openRelease(self) -> None:

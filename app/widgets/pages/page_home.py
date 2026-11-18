@@ -1,187 +1,241 @@
-"""Device connection, communication and firmware OTA workspace."""
-from PyQt5.QtCore import Qt, pyqtSignal
+# -*- coding: utf-8 -*-
+# -------------------------------
+#  @Project : F4CP
+#  @Time    : 2026 - 01-08 12:30
+#  @FileName: page_home.py
+#  @FileType: 首页页面文件，负责应用概览、版本和入口卡片
+#  @Software: PyCharm 2024.1.6 (Professional Edition)
+#  @System  : Windows 11 23H2
+#  @Author  : UF4
+#  @Contact :
+#  @Python  : 3.10
+# -------------------------------
+
+from PyQt5.QtCore import QSize, Qt, QUrl, QTimer
+from PyQt5.QtGui import QColor, QDesktopServices, QFont, QImage
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
-from qfluentwidgets import (BodyLabel, CaptionLabel, CardWidget, ComboBox, InfoBar,
-    LineEdit, PrimaryPushButton, PushButton, ScrollArea, SubtitleLabel, TextEdit)
-from app.protocol.ble_device import FLASH_UNAVAILABLE, decode_device_info
-from app.session.ble_controller import BleController
-from app.widgets.components import PageHeader
-from config import CTX
+from qfluentwidgets import (
+    BodyLabel,
+    CaptionLabel,
+    FluentIcon,
+    HeaderCardWidget,
+    HorizontalFlipView,
+    HyperlinkLabel,
+    ImageLabel,
+    PillPushButton,
+    PrimaryPushButton,
+    SimpleCardWidget,
+    TransparentToolButton,
+    VerticalSeparator,
+    setFont, ScrollArea,
+)
+from config import CTX, AppIconPath
+from app.manager import StyleSheet, update_manager
+from .page_layout import page_content, section
+from app.widgets.components.software_update_card import SoftwareUpdateCard
+
+class StatisticsWidget(QWidget):
+    def __init__(self, title: str, value: str, parent=None):
+        super().__init__(parent=parent)
+        self.titleLabel = CaptionLabel(title, self)
+        self.valueLabel = BodyLabel(value, self)
+        self.vBoxLayout = QVBoxLayout(self)
+
+        margin = 16
+        self.vBoxLayout.setContentsMargins(margin, 0, margin, 0)
+        self.vBoxLayout.addWidget(self.valueLabel, 0, Qt.AlignTop | Qt.AlignHCenter)
+        self.vBoxLayout.addWidget(self.titleLabel, 0, Qt.AlignBottom | Qt.AlignHCenter)
+
+        setFont(self.valueLabel, 18, QFont.DemiBold)
+        self.titleLabel.setTextColor(QColor(96, 96, 96), QColor(206, 206, 206))
+
+    def setTitle(self, title: str) -> None:
+        self.titleLabel.setText(title)
 
 
-def section(parent, title, subtitle):
-    card = CardWidget(parent)
-    layout = QVBoxLayout(card)
-    layout.setContentsMargins(16, 16, 16, 16)
-    layout.setSpacing(12)
-    layout.addWidget(SubtitleLabel(title, card))
-    caption = CaptionLabel(subtitle, card)
-    caption.setWordWrap(True)
-    caption.setVisible(bool(subtitle))
-    layout.addWidget(caption)
-    return card, layout
+class AppInfoCard(SimpleCardWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.iconLabel = ImageLabel(QImage(AppIconPath), self)
+        self.iconLabel.setBorderRadius(8, 8, 8, 8)
+        self.iconLabel.scaledToWidth(120)
+
+        self.nameLabel = BodyLabel("Fluor4CellPower", self)
+        setFont(self.nameLabel, 16, QFont.DemiBold)
+
+        self.installButton = PrimaryPushButton(self)
+        self.companyLabel = HyperlinkLabel(
+            QUrl("https://github.com/UF4OVER"), "UF4OVER", self
+        )
+        self.installButton.setFixedWidth(160)
+
+        self.scoreWidget = StatisticsWidget("", "5.0", self)
+        self.separator = VerticalSeparator(self)
+        self.commentWidget = StatisticsWidget("", "3K", self)
+
+        self.descriptionLabel = BodyLabel(self)
+        self.descriptionLabel.setWordWrap(True)
+
+        self.tagButton1 = PillPushButton(self)
+        self.tagButton1.setCheckable(False)
+        setFont(self.tagButton1, 12)
+        self.tagButton1.setFixedSize(80, 32)
+
+        self.tagButton2 = PillPushButton(self)
+        self.tagButton2.setCheckable(False)
+        setFont(self.tagButton2, 12)
+        self.tagButton2.setFixedSize(80, 32)
+
+        self.shareButton = TransparentToolButton(FluentIcon.SHARE, self)
+        self.shareButton.setFixedSize(32, 32)
+        self.shareButton.setIconSize(QSize(15, 15))
+
+        self.mainLayout = QVBoxLayout(self)
+        self.mainLayout.setContentsMargins(0, 0, 0, 0)
+        self.mainLayout.setSpacing(0)
+        self.hBoxLayout = QHBoxLayout()
+        self.mainLayout.addLayout(self.hBoxLayout)
+        self.vBoxLayout = QVBoxLayout()
+        self.topLayout = QHBoxLayout()
+        self.statisticsLayout = QHBoxLayout()
+        self.buttonLayout = QHBoxLayout()
+
+        self.initLayout()
+        self.applyTexts()
+        self.softwareUpdateCard = SoftwareUpdateCard(self, embedded=True)
+        detailsLayout = QVBoxLayout()
+        detailsLayout.setContentsMargins(24, 0, 24, 24)
+        detailsLayout.addWidget(self.softwareUpdateCard)
+        self.mainLayout.addLayout(detailsLayout)
+
+    def initLayout(self):
+        self.hBoxLayout.setSpacing(30)
+        self.hBoxLayout.setContentsMargins(34, 24, 24, 24)
+        self.hBoxLayout.addWidget(self.iconLabel)
+        self.hBoxLayout.addLayout(self.vBoxLayout)
+
+        self.vBoxLayout.setContentsMargins(0, 0, 0, 0)
+        self.vBoxLayout.setSpacing(0)
+
+        self.vBoxLayout.addLayout(self.topLayout)
+        self.topLayout.setContentsMargins(0, 0, 0, 0)
+        self.topLayout.addWidget(self.nameLabel)
+        self.topLayout.addWidget(self.installButton, 0, Qt.AlignRight)
+
+        self.vBoxLayout.addSpacing(3)
+        self.vBoxLayout.addWidget(self.companyLabel)
+        self.vBoxLayout.addSpacing(20)
+        self.vBoxLayout.addLayout(self.statisticsLayout)
+        self.statisticsLayout.setContentsMargins(0, 0, 0, 0)
+        self.statisticsLayout.setSpacing(10)
+        self.statisticsLayout.addWidget(self.scoreWidget)
+        self.statisticsLayout.addWidget(self.separator)
+        self.statisticsLayout.addWidget(self.commentWidget)
+        self.statisticsLayout.setAlignment(Qt.AlignLeft)
+
+        self.vBoxLayout.addSpacing(20)
+        self.vBoxLayout.addWidget(self.descriptionLabel)
+
+        self.vBoxLayout.addSpacing(12)
+        self.buttonLayout.setContentsMargins(0, 0, 0, 0)
+        self.vBoxLayout.addLayout(self.buttonLayout)
+        self.buttonLayout.addWidget(self.tagButton1, 0, Qt.AlignLeft)
+        self.buttonLayout.addWidget(self.tagButton2, 0, Qt.AlignLeft)
+
+        self.buttonLayout.addWidget(self.shareButton, 1, Qt.AlignRight)
+
+    def applyTexts(self):
+        if not self.installButton.isEnabled():
+            self.installButton.setText('检查中...')
+        else:
+            self.installButton.setText('检查更新')
+        self.scoreWidget.setTitle('评分')
+        self.commentWidget.setTitle('评论数')
+        self.descriptionLabel.setText(
+            "Fluor4CellPower 是一个多功能上位机工具，提供串口通信、数据可视化和设备管理能力，用于电子设备调试和监控。"
+        )
+        self.tagButton1.setText('稳定版')
+        self.tagButton2.setText('上位机')
+    def setCheckInProgress(self, checking: bool) -> None:
+        self.installButton.setEnabled(not checking)
+        self.applyTexts()
 
 
-def page_content(page, name, title, subtitle):
-    page.setObjectName(name)
-    page.setWidgetResizable(True)
-    page.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-    content = QWidget()
-    content.setObjectName(name + "Content")
-    page.setWidget(content)
-    page.setStyleSheet("QScrollArea, QWidget#" + name + "Content { background: transparent; border: none; }")
-    layout = QVBoxLayout(content)
-    layout.setContentsMargins(24, 24, 24, 24)
-    layout.setSpacing(12)
-    layout.addWidget(PageHeader(title, subtitle, content))
-    return content, layout
+class GalleryCard(HeaderCardWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.flipView = HorizontalFlipView(self)
+        self.expandButton = TransparentToolButton(FluentIcon.CHEVRON_RIGHT_MED, self)
+
+        self.expandButton.setFixedSize(32, 32)
+        self.expandButton.setIconSize(QSize(12, 12))
+
+        imgPath = CTX.dirs.AssetsDir / "F4CP_2x1_1200x600.png"
+        self.flipView.addImages([QImage(str(imgPath))])
+        self.flipView.setBorderRadius(8)
+        self.flipView.setSpacing(10)
+
+        itemSize = QSize(620, 351)
+        self.flipView.setItemSize(itemSize)
+        self.flipView.setMinimumSize(itemSize)
+
+        self.headerLayout.addWidget(self.expandButton, 0, Qt.AlignRight)
+        self.viewLayout.addWidget(self.flipView)
+        self.applyTexts()
+
+    def applyTexts(self):
+        self.setTitle('截图')
 
 
 class HomePage(ScrollArea):
-    stateChanged = pyqtSignal()
+    """Application overview with integrated software updates and screenshot gallery."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        content, layout = page_content(self, "HomePage", "设备工作台", "连接 UF4 Power，管理设备通信；固件升级请前往固件下载页。")
-        self._connected = self._busy = self._external_busy = self._closing = False
-        self._flash_ready = False
-        card, body = section(content, "设备连接", "设备配对码为 005213，软件自动提交口令；若系统弹出提示，请按提示确认。")
-        self.deviceCombo = ComboBox(card)
-        self.deviceCombo.setMinimumWidth(320)
-        self.scanButton = PushButton("扫描设备", card)
-        self.connectButton = PrimaryPushButton("连接", card)
-        self.disconnectButton = PushButton("断开", card)
-        self.repairButton = PushButton("重新配对", card)
-        self.repairButton.setToolTip("清除所选设备在电脑上的绑定，再重新配对；用于刷机后认证失败")
-        row = QHBoxLayout()
-        for w in (self.deviceCombo, self.scanButton, self.connectButton, self.disconnectButton, self.repairButton): row.addWidget(w)
-        body.addLayout(row)
-        self.connectionLabel = BodyLabel("未连接", card)
-        self.versionLabel = CaptionLabel("设备版本：--", card)
-        body.addWidget(self.connectionLabel)
-        body.addWidget(self.versionLabel)
-        layout.addWidget(card)
-        card, body = section(content, "固件下载", "V208 / G474 的有线下载与无线升级已集中到独立页面。")
-        self.firmwareButton = PushButton("打开固件下载", card)
-        self.firmwareButton.clicked.connect(lambda: self.window().switchTo(self.window().firmwareInterface))
-        body.addWidget(self.firmwareButton, 0, Qt.AlignLeft)
-        layout.addWidget(card)
-        card, body = section(content, "设备通信", "读取设备与外部存储信息，或发送十六进制命令进行通信调试。")
-        row = QHBoxLayout()
-        self.commandEdit = LineEdit(card)
-        self.commandEdit.setPlaceholderText("例如：01 55 AA（回显）或 00（设备信息）")
-        self.infoButton = PushButton("读取设备信息", card)
-        self.usbButton = PushButton("USB诊断", card)
-        self.sendButton = PushButton("发送", card)
-        row.addWidget(self.commandEdit, 1)
-        row.addWidget(self.infoButton)
-        row.addWidget(self.usbButton)
-        row.addWidget(self.sendButton)
-        body.addLayout(row)
-        self.storageLabel = CaptionLabel("W25Q256：等待设备信息", card)
-        self.storageLabel.setWordWrap(True)
-        self.log = TextEdit(card)
-        self.log.setReadOnly(True)
-        self.log.setMinimumHeight(150)
-        self.log.document().setMaximumBlockCount(500)
-        body.addWidget(self.storageLabel)
-        body.addWidget(self.log)
-        layout.addWidget(card)
-        layout.addStretch()
-        self.controller = BleController(self)
-        for signal, slot in ((self.controller.devices, self._devices), (self.controller.connected, self._connection),
-            (self.controller.version, self._version), (self.controller.message, self._message),
-            (self.controller.received, self._received), (self.controller.busy, self._set_busy),
-            (self.controller.result, self._result), (self.controller.ready, self._sync)):
-            signal.connect(slot)
-        self.scanButton.clicked.connect(lambda: self.controller.submit("scan"))
-        self.connectButton.clicked.connect(self._connect)
-        self.disconnectButton.clicked.connect(lambda: self.controller.submit("disconnect"))
-        self.repairButton.clicked.connect(self._repair_pairing)
-        self.infoButton.clicked.connect(lambda: self.controller.submit("exchange", b"\x00"))
-        self.usbButton.clicked.connect(lambda: self.controller.submit("usb_diagnostics"))
-        self.sendButton.clicked.connect(self._send)
-        self.commandEdit.returnPressed.connect(self._send)
-        self.controller.start()
-        self._sync()
+        self.setObjectName("HomePage")
+        self.scrollWidget = QWidget(self)
+        self.scrollWidget.setObjectName("homeScrollWidget")
+        self.vBoxLayout = QVBoxLayout(self.scrollWidget)
+        self.vBoxLayout.setContentsMargins(24, 24, 24, 24)
+        self.vBoxLayout.setSpacing(12)
+        self.appCard = AppInfoCard(self.scrollWidget)
+        self.softwareUpdateCard = self.appCard.softwareUpdateCard
+        self.galleryCard = GalleryCard(self.scrollWidget)
+        for card in (self.appCard, self.galleryCard):
+            self.vBoxLayout.addWidget(card, 0, Qt.AlignTop)
+        self.vBoxLayout.addStretch(1)
+        self.setWidget(self.scrollWidget)
+        self.setWidgetResizable(True)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.appCard.installButton.clicked.connect(self.requestUpdateCheck)
+        self.appCard.shareButton.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(CTX.cfg.appRepoUrl.value)))
+        self.galleryCard.expandButton.clicked.connect(lambda: QDesktopServices.openUrl(
+            QUrl.fromLocalFile(str(CTX.dirs.AssetsDir / "F4CP_2x1_1200x600.png"))))
+        CTX.versions.changed.connect(self._applyVersionSnapshot)
+        update_manager.stateChanged.connect(self._syncUpdate)
+        self._applyVersionSnapshot(CTX.versions.snapshot())
+        self._syncUpdate()
+        StyleSheet.HOME_PAGE.apply(self)
+        CTX.cfg.themeChanged.connect(lambda *_: StyleSheet.HOME_PAGE.apply(self))
+        self._startupTimer = QTimer(self)
+        self._startupTimer.setSingleShot(True)
+        self._startupTimer.timeout.connect(self._checkAtStartup)
+        if CTX.cfg.checkUpdateAtStartUp.value:
+            self._startupTimer.start(1000)
 
-    def _sync(self):
-        idle = self.controller.isRunning() and self.controller.loop is not None and not self._busy and not self._external_busy and not self._closing
-        self.scanButton.setEnabled(idle and not self._connected)
-        self.deviceCombo.setEnabled(idle and not self._connected)
-        self.connectButton.setEnabled(idle and not self._connected and self.deviceCombo.count() > 0)
-        self.disconnectButton.setEnabled(idle and self._connected)
-        self.repairButton.setEnabled(idle and not self._connected and self.deviceCombo.count() > 0)
-        for w in (self.commandEdit, self.infoButton, self.usbButton, self.sendButton): w.setEnabled(idle and self._connected)
-        self.stateChanged.emit()
+    def _applyVersionSnapshot(self, snapshot):
+        self.appCard.tagButton1.setText(snapshot.app.current or "--")
+        self.appCard.tagButton1.setFixedWidth(130)
 
-    def _devices(self, devices):
-        self.deviceCombo.clear()
-        for name, address, rssi in devices:
-            self.deviceCombo.addItem(f"{name} · {address} · {rssi} dBm", userData=address)
-        self._sync()
+    def requestUpdateCheck(self):
+        self.softwareUpdateCard.checkForUpdates()
 
-    def _connect(self):
-        address = self.deviceCombo.currentData()
-        if address: self.controller.submit("connect", address)
+    def _checkAtStartup(self):
+        self.softwareUpdateCard.checkForUpdates(manual=False)
 
-    def _connection(self, connected):
-        self._connected = connected
-        self.connectionLabel.setText("已连接 · 安全链路" if connected else "未连接")
-        if not connected:
-            self._flash_ready = False
-            self.versionLabel.setText("设备版本：--")
-            self.storageLabel.setText("W25Q256：等待设备信息")
-        self._sync()
-
-    def _repair_pairing(self):
-        address = self.deviceCombo.currentData()
-        if address:
-            self.controller.submit("repair_pairing", address)
-
-    def _version(self, version):
-        self.versionLabel.setText("设备版本：" + version)
-        if self._connected:
-            try: CTX.versions.set_current("Upper", version.split(" · ")[0])
-            except Exception as exc: self._message(f"版本缓存保存失败：{exc}")
-
-    def _set_busy(self, busy):
-        self._busy = busy
-        self._sync()
-
-    def _message(self, message): self.log.append(message)
-
-    def _received(self, raw):
-        self._message("RX  " + raw.hex(" ").upper())
-        if len(raw) == 20 and raw[0] == 1 and raw[2:4] == b"\x00\x00":
-            try:
-                self._flash_ready, jedec, capacity, user_base = decode_device_info(raw)
-            except ValueError as exc:
-                self._flash_ready = False
-                self.storageLabel.setText(str(exc))
-            else:
-                if self._flash_ready:
-                    self.storageLabel.setText(f"W25Q256：已识别 · JEDEC {jedec:06X} · {capacity // 1024 // 1024} MiB · 用户数据区 {(capacity - user_base) // 1024 // 1024} MiB")
-                else:
-                    self.storageLabel.setText(FLASH_UNAVAILABLE)
-                    self._message(FLASH_UNAVAILABLE)
-            self._sync()
-
-    def _send(self):
-        try:
-            payload = bytes.fromhex(self.commandEdit.text())
-            if not 1 <= len(payload) <= 20: raise ValueError("请输入 1～20 字节的十六进制命令")
-            if self.controller.submit("exchange", payload): self._message("TX  " + payload.hex(" ").upper())
-        except ValueError as exc: self._result(False, str(exc))
-
-    def _result(self, success, text):
-        self._message(text)
-        firmware = getattr(self.window(), "firmwareInterface", None)
-        if firmware is not None and firmware._active:
-            return
-        if not self._closing:
-            (InfoBar.success if success else InfoBar.error)("操作成功" if success else "操作未完成", text, duration=6000, parent=self)
-
-    def shutdown(self):
-        self._closing = True
-        return self.controller.shutdown()
+    def _syncUpdate(self):
+        checking, downloading = update_manager.is_checking, update_manager.is_downloading
+        self.appCard.setCheckInProgress(checking or downloading)
+        if downloading:
+            self.appCard.installButton.setText("正在下载…")
+        self.appCard.tagButton1.setText(CTX.versions.snapshot().app.current or "--")

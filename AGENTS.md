@@ -3,7 +3,8 @@
 执行前阅读 `../CH32V208RBT6/docs/开发与交付流程.md`，保留用户未提交的修改。
 
 - Windows / Python / UV；优先 pyproject.toml 配置的清华国内源。
-- 保留首页、软件更新、设置、个人四页；不要恢复未使用的设备/电池/DAPLink/参数等页面。
+- 保留首页、固件下载、设置、个人四页；软件更新集成在首页应用卡片下的子卡片，不单设导航页。
+  首页不放固件更新卡片；不要恢复未使用的设备/电池/DAPLink/参数等页面。
 - BLE 设备 UF4 Power V208，口令 005213；认证、加密和设备身份检查不可为了连接成功而移除。
 - Windows 使用 app/protocol/windows_pairing.py 的 PIN 后端，处理 PROVIDE_PIN，
   请求 ENCRYPTION_AND_AUTHENTICATION，不回退 Just Works。

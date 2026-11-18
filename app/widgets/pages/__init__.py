@@ -13,6 +13,5 @@
 
 from .page_home import *
 from .page_settings import *
-from .page_version import *
 from .page_profile import *
 from .page_firmware import FirmwarePage

@@ -27,7 +27,7 @@ from app.window import Window
 class Application(Window):
     def __init__(self):
         super().__init__()
-        self.resize(1500, 1000)
+        self.resize(1200, 900)
         self.setMinimumSize(1200, 900)
         # 窗口居中
         self.center()

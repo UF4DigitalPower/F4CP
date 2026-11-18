@@ -1,28 +1,26 @@
 """One firmware workspace for V208/G474, wired and authenticated wireless transfers."""
-from pathlib import Path
-import codecs
-import shutil
-import tempfile
-
-from PyQt5.QtCore import QProcess, Qt
-from PyQt5.QtWidgets import QFileDialog, QFormLayout, QGridLayout, QHBoxLayout, QMessageBox, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QFileDialog, QGridLayout, QHBoxLayout, QMessageBox, QVBoxLayout, QWidget
 from qfluentwidgets import (BodyLabel, CaptionLabel, ComboBox, InfoBar, LineEdit,
     FluentIcon as FIF, PrimaryPushButton, ProgressBar, PushButton, ScrollArea, TextEdit)
 
-from app.protocol.firmware_download import G474, V208, WIRED, WIRELESS, load_firmware, openocd_command
-from .page_home import page_content, section
+from app.protocol.firmware_download import G474, V208, WIRED, WIRELESS, load_firmware
+from .page_layout import page_content, section
+from .device_connection_panel import DeviceConnectionPanel
+from app.session.pyocd_programmer import PyOcdWorker
+from config import CTX
 
 
 class FirmwarePage(ScrollArea):
-    def __init__(self, home, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.home = home
-        self.controller = home.controller
+        self.blePanel = DeviceConnectionPanel(self)
+        self.controller = self.blePanel.controller
+        self._pyocd_worker = None
+        self._pyocd_action = ""
+        self._pyocd_outcome = None
         self._active = self._can_cancel = False
         self._path = ""
-        self._firmware = self._temporary = None
-        self._profiles = {V208: ["", "", ""], G474: [shutil.which("openocd") or "", "", ""]}
-        self._previous_target = V208
+        self._firmware = None
         content, layout = page_content(self, "FirmwarePage", "固件下载", "V208 / G474 固件烧录与无线升级")
 
         card, body = section(content, "连接与目标", "")
@@ -35,7 +33,6 @@ class FirmwarePage(ScrollArea):
         self.targetCombo.addItem("STM32G474RBT6", userData=G474)
         self.modeCombo = ComboBox(card)
         self.modeCombo.addItem("无线（BLE）", userData=WIRELESS)
-        self.modeCombo.addItem("有线（USB 调试器）", userData=WIRED)
         grid.addWidget(BodyLabel("目标芯片", card), 0, 0)
         grid.addWidget(self.targetCombo, 0, 1)
         grid.addWidget(BodyLabel("连接方式", card), 0, 2)
@@ -46,47 +43,43 @@ class FirmwarePage(ScrollArea):
         self.hintLabel = CaptionLabel(card)
         self.hintLabel.setWordWrap(True)
         connection_body = body
-        self.wirelessCard = QWidget(card)
-        body = QHBoxLayout(self.wirelessCard)
-        body.setContentsMargins(0, 0, 0, 0)
-        body.setSpacing(12)
-        self.connectionLabel = BodyLabel("未连接，请前往首页扫描并连接设备", self.wirelessCard)
-        self.connectionLabel.setWordWrap(True)
-        self.connectButton = PushButton(FIF.LINK, "连接设备", self.wirelessCard)
-        self.connectButton.clicked.connect(lambda: self.window().switchTo(self.home))
-        body.addWidget(BodyLabel("蓝牙状态", self.wirelessCard))
-        body.addWidget(self.connectionLabel, 1)
-        body.addWidget(self.connectButton)
+        self.wirelessCard = self.blePanel
+        self.connectionLabel = self.blePanel.connectionLabel
         connection_body.addWidget(self.wirelessCard)
 
-        self.wiredCard = QWidget(card)
-        body = QVBoxLayout(self.wiredCard)
-        body.setContentsMargins(0, 0, 0, 0)
-        body.setSpacing(8)
-        form = QFormLayout()
-        self.toolEdit = LineEdit(self.wiredCard)
-        self.toolEdit.setPlaceholderText("选择 openocd.exe")
-        self.toolButton = PushButton("浏览…", self.wiredCard)
-        self.configEdit = LineEdit(self.wiredCard)
-        self.configEdit.setPlaceholderText("WCH OpenOCD 同目录的 wch-riscv.cfg")
-        self.configButton = PushButton("浏览…", self.wiredCard)
-        self.serialEdit = LineEdit(self.wiredCard)
-        self.serialEdit.setPlaceholderText("可选；多台调试器连接时填写指定序列号")
-        self.baseCombo = ComboBox(self.wiredCard)
-        self.baseCombo.addItem("0x00000000 · 完整镜像 / 独立固件", userData=0)
-        self.baseCombo.addItem("0x00004000 · 仅应用，需已有兼容 Boot", userData=0x4000)
-        for label, edit, button in (("OpenOCD", self.toolEdit, self.toolButton), ("WCH 配置", self.configEdit, self.configButton)):
-            row = QHBoxLayout()
-            row.addWidget(edit, 1)
-            row.addWidget(button)
-            form.addRow(BodyLabel(label, self.wiredCard), row)
-        self.wiredForm = form
-        form.addRow(BodyLabel("调试器序列号", self.wiredCard), self.serialEdit)
-        form.addRow(BodyLabel("V208 BIN 地址", self.wiredCard), self.baseCombo)
-        body.addLayout(form)
-        self.toolButton.clicked.connect(self._tool)
-        self.configButton.clicked.connect(self._config)
-        connection_body.addWidget(self.wiredCard)
+        self.pyocdCard = QWidget(card)
+        probe_layout = QVBoxLayout(self.pyocdCard)
+        probe_layout.setContentsMargins(0, 0, 0, 0)
+        probe_layout.setSpacing(10)
+        row = QHBoxLayout()
+        self.probeCombo = ComboBox(self.pyocdCard)
+        self.probeCombo.setPlaceholderText("请扫描 DAPLink 探针")
+        self.scanProbeButton = PushButton(FIF.SYNC, "扫描探针", self.pyocdCard)
+        self.connectProbeButton = PushButton(FIF.LINK, "连接 / 识别", self.pyocdCard)
+        row.addWidget(self.probeCombo, 1)
+        row.addWidget(self.scanProbeButton)
+        row.addWidget(self.connectProbeButton)
+        probe_layout.addLayout(row)
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(12)
+        self.frequencyCombo = ComboBox(self.pyocdCard)
+        for text, value in (("100 kHz", 100000), ("500 kHz", 500000), ("1 MHz", 1000000), ("4 MHz", 4000000)):
+            self.frequencyCombo.addItem(text, userData=value)
+        self.connectModeCombo = ComboBox(self.pyocdCard)
+        self.connectModeCombo.addItems(["under-reset", "halt", "pre-reset", "attach"])
+        grid.addWidget(BodyLabel("SWD 频率", self.pyocdCard), 0, 0)
+        grid.addWidget(self.frequencyCombo, 0, 1)
+        grid.addWidget(BodyLabel("连接模式", self.pyocdCard), 0, 2)
+        grid.addWidget(self.connectModeCombo, 0, 3)
+        grid.setColumnStretch(1, 1)
+        grid.setColumnStretch(3, 1)
+        probe_layout.addLayout(grid)
+        self.probeInfoLabel = CaptionLabel("pyOCD · STM32G474RBTx · 本地 STM32G4 Pack", self.pyocdCard)
+        self.probeInfoLabel.setWordWrap(True)
+        probe_layout.addWidget(self.probeInfoLabel)
+        self.scanProbeButton.clicked.connect(lambda: self._start_pyocd("scan"))
+        self.connectProbeButton.clicked.connect(lambda: self._start_pyocd("connect"))
+        connection_body.addWidget(self.pyocdCard)
         connection_body.addWidget(self.hintLabel)
         layout.addWidget(card)
 
@@ -128,20 +121,13 @@ class FirmwarePage(ScrollArea):
         layout.addWidget(card)
         layout.addStretch()
 
-        self.process = QProcess(self)
-        self.process.setProcessChannelMode(QProcess.MergedChannels)
-        self.process.readyReadStandardOutput.connect(self._output)
-        self.process.finished.connect(self._wired_finished)
-        self.process.errorOccurred.connect(self._process_error)
         self.fileButton.clicked.connect(self._file)
         self.startButton.clicked.connect(self._start)
         self.cancelButton.clicked.connect(self._cancel)
         self.targetCombo.currentIndexChanged.connect(self._selection)
         self.modeCombo.currentIndexChanged.connect(self._selection)
-        self.baseCombo.currentIndexChanged.connect(self._clear_file)
-        self.toolEdit.textChanged.connect(self._sync)
-        self.configEdit.textChanged.connect(self._sync)
-        self.home.stateChanged.connect(self._sync)
+        self.probeCombo.currentIndexChanged.connect(self._sync)
+        self.blePanel.stateChanged.connect(self._sync)
         self.controller.phase.connect(self._phase)
         self.controller.progress.connect(self._progress)
         self.controller.result.connect(self._result)
@@ -159,26 +145,24 @@ class FirmwarePage(ScrollArea):
         return self.modeCombo.currentData() == WIRELESS
 
     def _selection(self, *_):
-        self._profiles[self._previous_target] = [self.toolEdit.text(), self.configEdit.text(), self.serialEdit.text()]
-        self._previous_target = self.target
-        tool, config, serial = self._profiles[self.target]
-        self.toolEdit.setText(tool)
-        self.configEdit.setText(config)
-        self.serialEdit.setText(serial)
         v208 = self.target == V208
-        for widget in (self.configEdit, self.configButton, self.baseCombo):
-            widget.setVisible(v208)
-        self.wiredForm.labelForField(self.baseCombo).setVisible(v208)
-        # The config row is a layout, so hide its label explicitly.
-        self.wiredForm.itemAt(1, QFormLayout.LabelRole).widget().setVisible(v208)
-        self.wiredCard.setVisible(not self.wireless)
+        modes = [WIRELESS] if v208 else [WIRELESS, WIRED]
+        if [self.modeCombo.itemData(i) for i in range(self.modeCombo.count())] != modes:
+            previous = self.modeCombo.currentData()
+            self.modeCombo.blockSignals(True)
+            self.modeCombo.clear()
+            self.modeCombo.addItem("无线（BLE）", userData=WIRELESS)
+            if not v208:
+                self.modeCombo.addItem("有线（DAPLink / pyOCD）", userData=WIRED)
+            self.modeCombo.setCurrentIndex(modes.index(previous) if previous in modes else 0)
+            self.modeCombo.blockSignals(False)
+        self.pyocdCard.setVisible(not self.wireless and not v208)
         self.wirelessCard.setVisible(self.wireless)
         if self.wireless:
             hint = ("V208：选择 .ota 包；安装后自动重连，核对运行版本、长度和 CRC32。" if v208 else
                     "G474：选择从 0x08000000 链接的 BIN，最大 128 KiB；需要支持 G474 下载的 Link V3 固件。目标擦写后读回校验。")
         else:
-            hint = ("V208：使用 WCH-Link，支持 HEX / BIN。HEX 按内置地址烧录；首次安装或更新 Boot 请选择完整 factory 镜像。" if v208 else
-                    "G474：使用 UF4 DAPLINK，支持 HEX / BIN，BIN 从 0x08000000 烧录，最大 128 KiB。请先关闭其他调试会话。")
+            hint = "G474：使用 pyOCD 连接 DAPLink，支持 HEX / BIN，最大 128 KiB；下载后完整读回校验。"
         self.hintLabel.setText(hint)
         self._clear_file()
 
@@ -193,34 +177,86 @@ class FirmwarePage(ScrollArea):
         self._sync()
 
     def _sync(self, *_):
-        idle = not self._active and not self.home._busy and not self.home._closing
-        self.connectionLabel.setText(self.home.connectionLabel.text() + " · " + self.home.versionLabel.text())
-        for widget in (self.targetCombo, self.modeCombo, self.fileButton, self.toolEdit, self.toolButton,
-                       self.configEdit, self.configButton, self.serialEdit, self.baseCombo):
+        idle = not self._active and not self.blePanel._busy and not self.blePanel._closing
+        for widget in (self.targetCombo, self.fileButton,
+                       self.probeCombo, self.scanProbeButton, self.frequencyCombo, self.connectModeCombo):
             widget.setEnabled(idle)
+        self.modeCombo.setEnabled(idle and self.target == G474)
         ready = bool(self._firmware)
         if self.wireless:
-            ready = ready and self.home._connected and self.home._flash_ready and self.controller.loop is not None
+            ready = ready and self.blePanel._connected and self.blePanel._flash_ready and self.controller.loop is not None
         else:
-            ready = ready and bool(self.toolEdit.text().strip()) and (self.target != V208 or bool(self.configEdit.text().strip()))
+            ready = ready and self.target == G474 and bool(self.probeCombo.currentData())
+        self.connectProbeButton.setEnabled(idle and bool(self.probeCombo.currentData()))
         self.startButton.setEnabled(idle and ready)
         self.cancelButton.setEnabled(self._active and self.wireless and self._can_cancel)
 
-    def _tool(self):
-        path, _ = QFileDialog.getOpenFileName(self, "选择 OpenOCD", self.toolEdit.text(), "OpenOCD (openocd.exe);;所有文件 (*)")
-        if path:
-            self.toolEdit.setText(path)
-            config = Path(path).with_name("wch-riscv.cfg")
-            if self.target == V208 and config.is_file():
-                self.configEdit.setText(str(config))
+    def _start_pyocd(self, action, firmware=None):
+        if self.target != G474 or self.wireless:
+            return
+        if self._pyocd_worker is not None or self.blePanel._busy:
+            if action == "program":
+                raise RuntimeError("连接任务尚未结束，请稍后下载")
+            return
+        if action != "program" and self._active:
+            return
+        if action != "scan" and not self.probeCombo.currentData():
+            if action == "program":
+                raise ValueError("请先扫描并选择 DAPLink 探针")
+            self._notify(False, "请先扫描并选择 DAPLink 探针")
+            return
+        self._active = True
+        self._can_cancel = False
+        self._pyocd_action = action
+        self._pyocd_outcome = None
+        self.blePanel._external_busy = True
+        self.blePanel._sync()
+        pack = CTX.dirs.McuPackDir / "UF4.STM32G4xx_DFP.2.2.0.pack"
+        worker = PyOcdWorker(action, uid=self.probeCombo.currentData() or "", pack=str(pack),
+                             frequency=self.frequencyCombo.currentData(),
+                             connect_mode=self.connectModeCombo.currentText(), firmware=firmware, parent=self)
+        self._pyocd_worker = worker
+        worker.probes.connect(self._probes)
+        worker.message.connect(self.log.append)
+        worker.progress.connect(self.progressBar.setValue)
+        worker.result.connect(self._pyocd_result)
+        worker.finished.connect(self._pyocd_finished)
+        self.progressBar.setRange(0, 100)
+        self.progressBar.setValue(0)
+        self.progressLabel.setText({"scan": "正在扫描 DAPLink 探针…", "connect": "pyOCD 正在连接和识别 G474…",
+                                    "program": "pyOCD 正在烧录 G474…"}[action])
+        worker.start()
+        self._sync()
 
-    def _config(self):
-        path, _ = QFileDialog.getOpenFileName(self, "选择 WCH 配置", self.configEdit.text(), "OpenOCD 配置 (*.cfg)")
-        if path:
-            self.configEdit.setText(path)
+    def _probes(self, probes):
+        uid = self.probeCombo.currentData()
+        self.probeCombo.clear()
+        for probe in probes:
+            self.probeCombo.addItem(f"{probe.description} · {probe.uid}", userData=probe.uid)
+        for i in range(self.probeCombo.count()):
+            if self.probeCombo.itemData(i) == uid:
+                self.probeCombo.setCurrentIndex(i)
+                break
+        self.probeInfoLabel.setText(f"发现 {len(probes)} 个探针 · pyOCD · STM32G474RBTx · 本地 STM32G4 Pack")
+
+    def _pyocd_result(self, success, text):
+        self._pyocd_outcome = success, text
+
+    def _pyocd_finished(self):
+        worker, self._pyocd_worker = self._pyocd_worker, None
+        outcome = self._pyocd_outcome or (False, "pyOCD 工作线程已结束，未确认操作成功")
+        self._finish(*outcome)
+        if self._pyocd_action != "program":
+            self.progressBar.setValue(0)
+        worker.deleteLater()
+
+    def shutdown(self):
+        if self._pyocd_worker is not None and self._pyocd_worker.isRunning():
+            return False
+        return self.blePanel.shutdown()
 
     def _load(self, path):
-        return load_firmware(path, self.target, WIRELESS if self.wireless else WIRED, self.baseCombo.currentData())
+        return load_firmware(path, self.target, WIRELESS if self.wireless else WIRED)
 
     def _file(self):
         filters = "OTA 固件 (*.ota)" if self.wireless and self.target == V208 else ("BIN 固件 (*.bin)" if self.wireless else "固件 (*.hex *.bin)")
@@ -246,17 +282,9 @@ class FirmwarePage(ScrollArea):
             if firmware != self._firmware:
                 self._clear_file()
                 raise ValueError("固件文件已变化，请重新选择并核对")
-            command = None
-            if not self.wireless:
-                self._temporary = tempfile.TemporaryDirectory(prefix="f4cp-flash-")
-                snapshot = Path(self._temporary.name) / ("firmware" + firmware.suffix)
-                snapshot.write_bytes(firmware.data)
-                command = openocd_command(self.toolEdit.text().strip(), self.target, snapshot,
-                                          self.baseCombo.currentData(), self.configEdit.text().strip(), self.serialEdit.text())
             warning = ("开始上传并安装？" if self.target == V208 and self.wireless else
                        "将擦写所选芯片的固件区域。擦写期间请保持供电和连接，完成前不能退出。是否开始？")
             if QMessageBox.question(self, "确认固件下载", self.targetCombo.currentText() + "\n" + self.modeCombo.currentText() + "\n" + firmware.summary + "\n\n" + warning) != QMessageBox.Yes:
-                self._cleanup()
                 return
             self._active = True
             self._can_cancel = self.wireless
@@ -268,35 +296,10 @@ class FirmwarePage(ScrollArea):
                 if not self.controller.submit("upload" if self.target == V208 else "target_upload", firmware.data):
                     raise RuntimeError("设备正忙或连接线程未就绪")
             else:
-                self.home._external_busy = True
-                self.home._sync()
-                self._verified = False
-                self._output_tail = ""
-                self._decoder = codecs.getincrementaldecoder("utf-8")("replace")
-                self.process.setWorkingDirectory(str(Path(command[0]).parent))
-                self.progressBar.setRange(0, 0)
-                self.progressLabel.setText("正在有线烧录与校验，请保持连接…")
-                self.process.start(*command)
+                self._start_pyocd("program", firmware)
         except Exception as exc:
             self._finish(False, str(exc))
         self._sync()
-
-    def _output(self):
-        text = self._decoder.decode(bytes(self.process.readAllStandardOutput()))
-        self._verified = self._verified or "F4CP_VERIFY_OK" in self._output_tail + text
-        self._output_tail = (self._output_tail + text)[-64:]
-        self.log.moveCursor(self.log.textCursor().End)
-        self.log.insertPlainText(text)
-
-    def _wired_finished(self, code, status):
-        if self._active and not self.wireless:
-            self._output()
-            success = code == 0 and status == QProcess.NormalExit and self._verified
-            self._finish(success, "有线下载完成，OpenOCD 写入及读回校验通过" if success else f"有线下载未完成（退出码 {code}），请查看日志；未确认烧录成功")
-
-    def _process_error(self, error):
-        if error == QProcess.FailedToStart and self._active:
-            self._finish(False, "无法启动 OpenOCD：" + self.process.errorString())
 
     def _phase(self, text, can_cancel):
         if self._active and self.wireless:
@@ -330,16 +333,10 @@ class FirmwarePage(ScrollArea):
             self.progressLabel.setText("正在取消上传…")
             self._sync()
 
-    def _cleanup(self):
-        if self._temporary is not None:
-            self._temporary.cleanup()
-            self._temporary = None
-
     def _finish(self, success, text):
         self._active = self._can_cancel = False
-        self.home._external_busy = False
-        self.home._sync()
-        self._cleanup()
+        self.blePanel._external_busy = False
+        self.blePanel._sync()
         self.progressBar.setRange(0, 100)
         if success:
             self.progressBar.setValue(100)

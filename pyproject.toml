@@ -21,6 +21,7 @@ dependencies = [
     "PyQt5>=5.15.2",
     "pyqt-fluent-widgets>=1.11.2",
     "bleak>=2.0.0",
+    "pyocd>=0.44",
 ]
 
 [tool.uv]
@@ -45,7 +46,7 @@ executables = [
 [tool.cxfreeze.build_exe]
 build_exe = "build/exe"
 includes = ["PyQt5.QtCore", "PyQt5.QtGui", "PyQt5.QtWidgets", "qfluentwidgets", "config"]
-packages = ["config", "bleak", "winrt", "qfluentwidgets"]
+packages = ["config", "bleak", "winrt", "qfluentwidgets", "pyocd", "libusb_package", "cmsis_pack_manager", "lark", "pylink", "psutil"]
 include_files = [
     ["pyproject.toml", "pyproject.toml"],
     ["LICENSE", "LICENSE"],
@@ -53,9 +54,10 @@ include_files = [
     ["src/font", "src/font"],
     ["src/theme", "src/theme"],
     ["src/config/profile.json", "src/config/profile.json"],
+    ["src/tools/pack/UF4.STM32G4xx_DFP.2.2.0.pack", "src/tools/pack/UF4.STM32G4xx_DFP.2.2.0.pack"],
 ]
 zip_include_packages = ["*"]
-zip_exclude_packages = ["PyQt5", "qfluentwidgets", "bleak", "winrt"]
-excludes = ["tkinter", "matplotlib", "pyocd", "esptool", "pyqtgraph"]
+zip_exclude_packages = ["PyQt5", "qfluentwidgets", "bleak", "winrt", "pyocd", "libusb_package", "cmsis_pack_manager", "capstone", "lark", "psutil"]
+excludes = ["tkinter", "matplotlib", "esptool", "pyqtgraph"]
 optimize = 2
 include_msvcr = true

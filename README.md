@@ -6,7 +6,8 @@
 
 F4CP 是 UF4 数字电源的 Windows 上位机。本版配合 CH32V208RBT6 固件，通过 BLE 完成设备连接、基础通信和 W25Q256 备用区固件 OTA。
 
-界面包含五页：**首页、固件下载、软件更新、设置、个人**。旧串口、设备参数、电源仪表、DAPLink 和电池页面已删除。
+界面包含四页：**首页、固件下载、设置、个人**。软件更新集成在首页应用卡片下方的子卡片；
+首页不再展示固件更新卡片。旧串口、设备参数、电源仪表、DAPLink 和电池页面已删除。
 
 ## 安装和运行
 
@@ -17,7 +18,7 @@ uv sync
 uv run python start.py
 ```
 
-首次连接：在首页扫描 **UF4 Power V208**，连接时按 Windows 提示输入 **005213**。
+首次连接：在“固件下载”页选择无线，扫描 **UF4 Power V208**，连接时按 Windows 提示输入 **005213**。
 连接后显示设备实际固件版本；读取设备信息可检查 W25Q256 的 JEDEC、32MiB 容量和用户区。
 Flash 未识别时禁用升级并提示接线，上传前会再次查询确认，避免进入擦除后才报错误 5。
 实际接线为 PB3=CLK、PB4=MISO、PB5=MOSI、PD2=/CS；0.1.0 起 Flash 使用 GPIO SPI，硬件 SPI1 用于 SWD。
@@ -33,7 +34,7 @@ Windows 使用独立的 WinRT 后端扩展处理 `PROVIDE_PIN` 事件，自动�
 配对事件注册在结束、失败、取消或超时时均会移除。配对修复仅影响上位机，独立于固件版本递增。
 通信框支持十六进制请求/响应，例如 `01 55 AA` 回显，`00` 查询信息。
 
-固件 0.1.2 起，首页“设备通信”提供 **USB诊断**：通过安全 BLE 连接读取 USB 枚举计数、
+固件 0.1.2 起，“设备通信”提供 **USB诊断**（现位于固件下载页）：通过安全 BLE 连接读取 USB 枚举计数、
 寄存器和最近 SETUP，在下方日志框显示可复制的文本，无需串口或 USB 枚举成功。
 固件 0.1.3 会先让 USB 独立枚举约3秒，再启动 BLE；新版诊断会同时显示 BLE 启动前冻结快照和当前状态。
 保持 USB 连接并重启应用后读取；诊断不会清计数、复位 USB 或改写 Flash。
@@ -46,44 +47,70 @@ Windows 使用独立的 WinRT 后端扩展处理 `PROVIDE_PIN` 事件，自动�
 
 ## 固件下载界面
 
-导航栏“固件下载”统一管理 V208 与 G474。首页保留扫描、连接和通信，通过同一个
-BLE 工作线程执行无线下载。页面按 `36606e14^` 的下载页风格组织：系统字体、红色主题色、
-Mica 背景，24px 页面边距、16px 卡片边距、紧凑网格和图标按钮；窗口默认 1500×1000。
+导航栏“固件下载”统一管理 V208 与 G474，包含 BLE 扫描、连接和通信，通过同一个
+BLE 工作线程执行无线下载。首页保留 `36606e14^` 的应用介绍和截图布局，
+固件下载通过独立导航进入。下载页沿用旧版风格：系统字体、红色主题色、
+Mica 背景，24px 页面边距、16px 卡片边距、紧凑网格和图标按钮；窗口默认 1200×900。
 已有主题/字体偏好仍可在设置页调整。
 
 | 芯片 | 无线 | 有线 |
 | --- | --- | --- |
-| CH32V208RBT6 | `.ota`，上传后重启、重连并核对版本/长度/CRC | WCH-Link + WCH OpenOCD，`.hex` / `.bin` |
-| STM32G474RBT6 | 通过 Link V3 暂存 BIN，再以 SWD 烧录并读回校验，最大 128KiB | 板载 UF4 DAPLINK + 支持 STM32G4 的 OpenOCD，`.hex` / `.bin` |
+| CH32V208RBT6 | `.ota`，上传后重启、重连并核对版本/长度/CRC | 不提供 |
+| STM32G474RBT6 | 通过 Link V3 暂存 BIN，再以 SWD 烧录并读回校验，最大 128KiB | DAPLink + 内置 pyOCD 和本地 STM32G4 Pack，`.hex` / `.bin` |
 
-无线下载先在首页连接，设备身份、认证、加密及 W25Q256 查询通过后才允许上传；
+无线下载在本页连接，设备身份、认证、加密及 W25Q256 查询通过后才允许上传；
 G474 还需设备提供 Link V3 G474 服务。G474 BIN 从 `0x08000000` 链接，上传按 8B 补 FF，
 检查向量表、偏移和 CRC；暂存校验通过后才开始目标擦写。每次写请求只发送一次，
 响应丢失不重放命令。目标擦写与 V208 安装提交后禁止取消；传输到 95% 后等待最终校验，
 只有确认成功才显示 100%。
 
-有线页需要选择外部 `openocd.exe`。V208 使用 WCH 版本，并选择它 **bin 同目录**的
-`wch-riscv.cfg`（不是通用 scripts/wch 下同名示例）；选择 EXE 后会自动查找同目录配置。
-G474 使用 `interface/cmsis-dap.cfg` / `target/stm32g4x.cfg`，指定 UF4 的 VID/PID `1A86:FE0C`，
-在写入前核对 0x469 DEV_ID 与 128KiB 容量。可以指定调试器序列号；连接多个探针时应明确指定。
-外部 OpenOCD、驱动及配套脚本不打入 F4CP 包，需要单独安装。
+G474 无线上传会在暂存区准备后等待最多 1.5 秒刷新 MTU，兼容 MTU23，
+每组继续刷新实际包长（MTU247 时为 239B 数据/包）。DATA 保留逐包写入应答，
+每最多 8 包核对一次已持久化的偏移、长度和 CRC 身份；任何写入错误直接停止，
+不自动重发。暂存完整 CRC 和目标 Flash 读回校验继续执行。
+速度仅计算蓝牙上传阶段，不含暂存区擦除和 MTU 等待；不代表 SWD 写入速率或全程速度。
+此优化只需更新 F4CP，兼容现有 Link V3 固件，不要求更新 V208 或 G474 固件。
 
-HEX 按自身地址烧录，拒绝越界、重叠、校验和错误及非程序区记录；BIN 显式设置地址。
-V208 BIN 可选择 0 / 0x4000，首次安装或修改 Boot 须选完整 factory 镜像；
-V208 当前 factory 采用工程既有扩展 Flash 分区，不能当作严格 128KiB 镜像。
+2026-11-18 无线上传优化验证：115 项上位机测试通过，见
+`output/g474-upload-tests.log`；含 MTU 延迟协商、MTU23/247、分组确认、取消、
+偏移/CRC 错误、写应答丢失不重发及排除擦除时间的速度统计。
+此前按两份 Python 文件字节相等判断 OTA 格式的过期测试，改为验证固件只读解析器
+与桌面解析器对有效包、损坏包的兼容性，适配已迁移的 C 打包器。
+`uv run cxfreeze build` 已重新生成 `build/exe/F4CP.exe`，保留整个目录；
+新上传模块的打包字节码与源码核对、打包 BLE 依赖导入及 EXE 启动存活检查通过，
+日志分别为 `output/g474-upload-package.log`、`output/g474-upload-package-check.log`、
+`output/g474-upload-startup.log`。未连接、刷写真实设备，实际吞吐提升尚待实测。
+
+V208 仅提供无线 OTA，连接方式固定为 BLE；已移除有线 WCH 烧录入口、工具配置和调用代码。
+从 G474 有线模式切换到 V208 时会自动切回无线，并清除上一目标选择的固件。
+
+G474 使用 pyOCD Python API，扫描后按完整 UID 选择 DAPLink；UF4 `1A86:FE0C` 显式注册，
+优先 HID 接口。默认 100kHz、under-reset，可选择连接频率和模式。
+内置 Pack 目标为 `stm32g474rbtx`，写入前核对 0x469 DEV_ID、128KiB 容量及保护状态；
+禁止自动解除读写保护或修改选项字节。按扇区写入后逐字节读回全部固件段，全部一致才复位运行。
+“连接 / 识别”结束后会释放会话，目标可能保持暂停，可下载或手动复位后运行。
+旧代码先通过 `uf4-target` 为 F401 调试器切换 G474/F429，再调用 pyOCD；
+当前 V208 的 SWD 固定连接 G474，不发送旧目标切换命令，也不恢复旧 DAPLink 独立页面。
+
+G474 HEX 按自身地址烧录，拒绝越界、重叠、校验和错误及非程序区记录；BIN 从 `0x08000000` 写入。
 不支持把 `.ota` 当作有线镜像，也不自动擦除绑定、用户区或解除保护。
-有线下载使用已检查文件的临时快照，通过 QProcess 异步启动，写入并校验通过才报告完成。
+G474 有线下载使用已检查文件的快照，在后台线程调用 pyOCD API；
+冻结 EXE 不会通过 `sys.executable -m pyocd` 重新启动自身。
 
-下载期间禁用首页设备操作和下载参数，避免并行访问。关闭窗口时先协作取消上传，
+下载期间禁用设备操作和下载参数，避免并行访问。关闭窗口时先协作取消上传，
 不会强行停止已进入安装或目标擦写阶段的工作线程。目标擦写断电后可能需要重新完整烧录。
 本次只修改上位机，不提升设备版本；不自动刷写硬件。
 
 新增校验覆盖固件格式/越界、G474 MTU23/247、取消、CRC/偏移错误、丢失响应不重放，
-以及页面互斥、进程启动失败和最终成功确认。测试与界面检查不等于实板烧录通过。
-本次 96 项上位机测试通过，重新执行 `uv run cxfreeze build`，并检查新增页面、G474 协议和
-Windows PIN 后端已收进包。交付 `build/exe/F4CP.exe`，保留整个 `build/exe` 目录；
-测试日志 `output/firmware-tests.log`，打包日志 `output/firmware-package.log`。
-原生窗口外观预览为 `output/firmware-native.png`。未连接或刷写真实设备，四种下载通道均待实板验证。
+以及页面互斥、连接方式切换和最终成功确认。测试与界面检查不等于实板烧录通过。
+本轮 106 项上位机测试通过（删除已移除通道的测试，保留 pyOCD 模拟探针、保护检查、读回失败和线程互斥），
+测试日志 `output/remove-wch-tests.log`。打包命令 `uv run cxfreeze build`，
+日志 `output/remove-wch-package.log`，交付 `build/exe/F4CP.exe`，保留整个 `build/exe` 目录。
+隔离开发依赖后，交付目录的 pyOCD/HID/原生库导入、Pack 目标和调试序列解析通过，
+记录见 `output/remove-wch-package-check.log`（同时验证打包界面的连接方式切换）；
+EXE 启动检查见 `output/remove-wch-startup.log`。
+原生窗口预览为 `output/home-restored.png`、`output/firmware-pyocd.png` 和
+`output/firmware-wireless.png`。未连接或刷写真实设备，三种下载通道均待实板验证。
 
 ## 固件 OTA
 
@@ -102,8 +129,8 @@ Windows PIN 后端已收进包。交付 `build/exe/F4CP.exe`，保留整个 `bui
 
 [固件接线、分区、通信协议与恢复说明](../CH32V208RBT6/README.md)。
 0.1.0 新增的 [USBFS CMSIS-DAP](../CH32V208RBT6/docs/USBFS-DAP.md) 可供 OpenOCD/调试器直接访问 G4，
-不需要 F4CP 转发；BLE 连接与通信保持在首页，自身 OTA 已迁移到固件下载页。
-本版实现 V208 自身 OTA、G474 无线 SWD 下载、有线 OpenOCD 下载与基础通信；未猜测未提供的 STM32 电源控制、采样和使能引脚。
+不需要 F4CP 转发；BLE 连接、通信和自身 OTA 均位于固件下载页。
+本版实现 V208 自身 OTA、G474 无线 SWD 下载、G474 有线 pyOCD 下载与基础通信。
 
 ## 设置与个人信息
 
@@ -127,7 +154,7 @@ uv run cxfreeze build
 - `app/protocol/ble_device.py`：BLE 连接、通信与 OTA 上传/安装确认。
 - `app/protocol/ota_package.py`：与固件打包器一致的升级包校验。
 - `app/session/ble_controller.py`：独立工作线程中的 asyncio / WinRT 会话。
-- `app/widgets/pages/`：五个页面。
+- `app/widgets/pages/`：首页、固件下载、设置和个人四个页面。
 - `config/`：原有原子保存、版本服务与主题设置。
 
 ## 配置模块
@@ -156,7 +183,7 @@ uv run cxfreeze build
 ## 版本管理
 
 `app/version.py` 统一版本比较、版本状态和不可变快照；`CTX.versions`（也可导入
-`version_manager`）统一读写版本缓存，并通过 `changed(snapshot)` 通知首页、版本页和设置页。
+`version_manager`）统一读写版本缓存，并通过 `changed(snapshot)` 通知首页和设置页。
 组件名统一为 `App`、`Power`、`Upper`，配置使用两个分组：
 
 ```json
@@ -182,14 +209,27 @@ uv run cxfreeze build
 
 ## 软件更新
 
-在“版本”页的“软件更新 · GitHub Release”卡片中点击“检查软件更新”。默认检查
+在首页应用卡片右上角点击“检查更新”，检查结果和下载控件直接显示在下方子卡片。默认检查
 `UF4DigitalPower/F4CP` 的正式 Release，根据语义版本号判断是否需要更新；开发版不会被旧版 Release 降级。
 “设置 → 启动”可开启启动检查和包含预发布版本（Alpha、Beta、RC）。
 
 发现新版本后，程序按当前系统和 CPU 架构筛选附件（Windows x64 也兼容 x86 包），
 可选择附件和保存位置，并查看下载进度或取消下载。下载完成前使用临时文件，完成后校验文件大小，
 若 GitHub 提供 SHA-256 则同时校验摘要；失败或取消会清理临时文件。更新包下载完成后，请退出程序，
-手动解压或运行安装包。主页“检查更新”发现新版本时也可直接跳转下载。
+手动解压或运行安装包；检查和下载过程中停留在首页，不再跳转独立软件更新页。
+
+未检查更新时，子卡片显示随软件附带的当前版本介绍（`src/assets/f4cp-release-notes.md`），
+无需联网。发现新版本后展示该 Release 的 Markdown 更新说明和适配附件；最新发布与当前版本
+相同时可显示对应发布说明，旧版 Release 不会替换当前版本介绍或触发降级下载。
+自动检查失败时保留当前版本介绍，并在卡片内显示错误。深色与浅色主题均支持说明文本显示。
+
+本轮 112 项上位机测试通过，包含首页版本说明、更新下载/取消和版本同步；
+日志 `output/home-update-tests.log`。打包日志 `output/home-update-package.log`，
+交付目录隔离检查和 EXE 启动检查通过，见 `output/home-update-package-check.log`、
+`output/home-update-startup.log`。交付 `build/exe/F4CP.exe`，保留整个目录。
+首页预览为 `output/home-update-current.png`、
+`output/home-update-available.png` 和 `output/home-update-light.png`；新版预览使用模拟 Release，
+不表示已发布该版本。未连接或刷写真实设备。
 
 更新地址保存在 `src/config/config.json` 的 `Update.UpdateUrl`，支持 HTTPS GitHub 仓库、
 Release 页面或 API 地址。原先指向 `UF4OVER/UF4DigitalPower` 的默认软件地址会自动迁移；

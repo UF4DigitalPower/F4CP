@@ -54,7 +54,7 @@ class Window(WindowShellMixin, NavigationMixin, ThemeBackgroundMixin, MSFluentWi
             self.firmwareInterface._cancel()
             event.ignore()
             return
-        if not self.homeInterface.shutdown():
+        if not self.firmwareInterface.shutdown():
             event.ignore()
             return
         super().closeEvent(event)

@@ -8,6 +8,9 @@ from .ota_package import crc
 
 UPDATE = "9e9a0031-5213-4592-8f04-554634504857"
 LIMIT = 128 * 1024
+# DATA Write Responses already acknowledge persisted/read-back-verified bytes.
+# Read the full session identity once per bounded group, not once per packet.
+ACK_WINDOW = 8
 STATES = ("空闲", "擦除暂存区", "上传至暂存区", "暂存 CRC 校验", "待烧录", "连接 SWD",
           "擦除 G474", "写入 G474", "读回校验", "完成", "失败", "取消中")
 ERRORS = ("无", "协议", "状态", "长度", "偏移", "W25Q256", "CRC", "SWD 忙", "SWD 通信",
@@ -55,7 +58,6 @@ async def upload(device, original, cancelled, progress, phase):
     if (await device.status())[0] != 0:
         raise RuntimeError("V208 有未结束的 OTA 会话，请先断开并重新连接")
     started = completed = programming = False
-    started_at = time.monotonic()
     last_phase = None
 
     def check_cancel():
@@ -86,15 +88,34 @@ async def upload(device, original, cancelled, progress, phase):
         started = True  # A lost ATT response may still mean the command was accepted.
         await client.write_gatt_char(UPDATE, b"\x01" + struct.pack("<II", len(image), checksum), response=True)
         await wait_state(2, (1,), 120)
-        chunk = min(239, max(23, client.mtu_size) - 8)
-        for offset in range(0, len(image), chunk):
+        # Small images finish NOR erase before the peripheral's delayed MTU
+        # exchange. Give it a bounded opportunity, retaining MTU 23 support.
+        for attempt in range(11):
             check_cancel()
-            data = image[offset:offset + chunk]
-            await client.write_gatt_char(UPDATE, b"\x02" + struct.pack("<I", offset) + data, response=True)
+            chunk = min(239, max(23, client.mtu_size) - 8)
+            if chunk > 15 or attempt == 10:
+                break
+            await asyncio.sleep(0.15)
+        phase(f"正在上传 G474 暂存区 · {chunk} 字节/包 · 逐包应答、分组核对", True)
+        started_at = time.monotonic()
+        done = 0
+        while done < len(image):
+            check_cancel()
+            # Refresh negotiated MTU at each group; writes stay sequential and
+            # acknowledged, so an ATT failure aborts without replaying DATA.
+            chunk = min(239, max(23, client.mtu_size) - 8)
+            end = done
+            for _ in range(ACK_WINDOW):
+                check_cancel()
+                data = image[end:end + chunk]
+                await client.write_gatt_char(UPDATE, b"\x02" + struct.pack("<I", end) + data, response=True)
+                end += len(data)
+                if end == len(image):
+                    break
             confirmed = await status(client)
-            done = offset + len(data)
-            if confirmed[:4] != (2, done, len(image), checksum):
+            if confirmed[:4] != (2, end, len(image), checksum):
                 raise RuntimeError("G474 暂存偏移或镜像校验值不匹配")
+            done = end
             speed = done / max(0.001, time.monotonic() - started_at)
             progress(done, len(image), speed, (len(image) - done) / speed)
         check_cancel()
