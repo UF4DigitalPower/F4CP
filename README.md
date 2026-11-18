@@ -206,9 +206,18 @@ EXE 启动检查见 `output/remove-wch-startup.log`。
 ## 设置与个人信息
 
 设置页保留主题、主题色、字体、高 DPI、启动检查更新和预发布版本选项。
-个人页显示作者、联系邮箱、项目与许可证。真实软著信息从 `src/config/profile.json` 读取，
-填写 `SoftwareName`、`Owner`、`RegistrationNumber` 和 `RegistrationDate` 后重新打开个人页即可刷新。
-没有提供的登记信息显示“待补充”。
+个人页以软件 ICO 和名称为顶部标识，项目详情、源码仓库与知识产权三张卡片垂直排列，
+默认展开；点击标题栏或右侧箭头可独立收起，键盘空格与回车也可操作。
+去掉页底版权和版本栏，当前版本在项目详情内查看。框架、仓库和许可证使用工程真实信息。
+软著信息从 `src/config/profile.json` 读取：`SoftwareName`、`Owner`、`CertificateNumber`、
+`RegistrationNumber`、`AcquisitionMethod`、`RightsScope` 和 `RegistrationDate`。
+已按用户提供填写何平、软著登字第18166005号、2026SR0951724、原始取得及全部权利；
+未提供的登记日期显示“待补充”。重新打开个人页可刷新资料，版本跟随工程版本。
+折叠界面的测试、模拟字段核对、深浅主题和900/1200宽度检查记录为
+`output/profile-collapse-tests.log`、`output/profile-collapse-render.log`；同时检查标题/箭头点击、
+键盘操作、独立收起与布局缩短，预览为 `output/profile-collapse-preview.png`。
+EXE构建、模块与资料核对、启动记录为 `output/profile-collapse-package.log`、
+`output/profile-collapse-package-check.log` 和 `output/profile-collapse-startup.log`，未操作硬件。
 
 ## 验证与打包
 

@@ -12,8 +12,13 @@
     },
     "Update": {
         "CheckUpdateAtStartUp": false,
-        "UpdateUrl": "https://github.com/UF4DigitalPower/F4CP/releases",
-        "IncludePrereleases": false
+        "IncludePrereleases": false,
+        "UpdateUrl": "https://github.com/UF4DigitalPower/F4CP/releases"
+    },
+    "VersionCurrent": {
+        "App": "3.0.1.A1",
+        "Power": "v1.4.2",
+        "Upper": "v0.4.4"
     },
     "Daplink": {
         "OpenocdExe": "",
@@ -30,7 +35,7 @@
             "Microsoft YaHei",
             "PingFang SC"
         ],
-        "ThemeColor": "#ffff1010",
+        "ThemeColor": "#ffff51f1",
         "ThemeMode": "Dark"
     },
     "Appearance": {
@@ -48,11 +53,6 @@
     "MainWindow": {
         "HighDpiScaling": true,
         "MicaEnabled": true
-    },
-    "VersionCurrent": {
-        "App": "3.0.0.A3",
-        "Power": "v1.4.2",
-        "Upper": "v0.4.4"
     },
     "VersionLatest": {
         "App": "v1.1.0.RC1",
