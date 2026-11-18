@@ -11,11 +11,7 @@
 #  @Python  : 3.10
 # -------------------------------
 
-from .page_device import *
-from .page_daplink import *
 from .page_home import *
-from .page_power import *
-from .page_parameters import *
 from .page_settings import *
-from .page_battery import *
 from .page_version import *
+from .page_profile import *

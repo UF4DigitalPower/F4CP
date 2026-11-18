@@ -1,6 +1,6 @@
 [project]
 name = "F4CP"
-version = "2.0.0.A1"
+version = "3.0.0.A2"
 # dev1    开发快照，最早期，不稳定
 # a1       alpha 内测版，功能可能还没完整
 # b1       beta 测试版，功能基本有了，但可能有 bug
@@ -19,116 +19,43 @@ dependencies = [
     "packaging>=24.2",
     "cx-freeze>=8.7",
     "PyQt5>=5.15.2",
-    "pyocd>=0.44.1",
     "pyqt-fluent-widgets>=1.11.2",
-    "pyqtgraph>=0.14.0",
-    "esptool>=5.3.1",
+    "bleak>=2.0.0",
 ]
 
 [tool.uv]
+system-certs = true
+link-mode = "copy"
 constraint-dependencies = [
     "pyqt5-qt5 >=5.15.2",
     "capstone >=5.0.2",
 ]
 
 
+[[tool.uv.index]]
+name = "tuna"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
+
 [tool.cxfreeze]
 executables = [
-    { script = "start.py", base = "gui", target_name = "F4CP", icon = "Resources/Assets/F4CP_ICO_256.ico" },
-    { script = "script/pyocd_launcher.py", base = "console", target_name = "pyocd" },
+    { script = "start.py", base = "gui", target_name = "F4CP", icon = "src/assets/F4CP_ICO_256.ico" },
 ]
 
 [tool.cxfreeze.build_exe]
-
 build_exe = "build/exe"
-
-includes = [
-    "PyQt5.QtCore",
-    "PyQt5.QtGui",
-    "PyQt5.QtWidgets",
-    "pyocd",
-    "esptool",
-    "serial",
-    "qfluentwidgets",
-    "numpy",
-    "pyqtgraph",
-    "config",
-]
-
-packages = [
-    "app",
-
-    "app.core",
-    "app.ctrl",
-    "app.manager",
-    "app.protocol",
-    "app.session",
-    "app.session.page_daplink",
-    "app.session.page_device",
-    "app.session.page_power",
-    "app.widgets",
-    "app.window",
-
-    "app.widgets.chart",
-    "app.widgets.icon",
-    "app.widgets.pages",
-
-    "config",
-    "tools",
-]
+includes = ["PyQt5.QtCore", "PyQt5.QtGui", "PyQt5.QtWidgets", "qfluentwidgets", "config"]
+packages = ["config", "bleak", "winrt", "qfluentwidgets"]
 include_files = [
     ["pyproject.toml", "pyproject.toml"],
-    ["Resources/assets", "Resources/assets"],
-    ["Resources/font", "Resources/font"],
-    ["Resources/theme", "Resources/theme"],
-    ["Resources/tools", "Resources/tools"],
-    ["Resources/Config", "Resources/Config"],
+    ["LICENSE", "LICENSE"],
+    ["src/assets", "src/assets"],
+    ["src/font", "src/font"],
+    ["src/theme", "src/theme"],
+    ["src/config/profile.json", "src/config/profile.json"],
 ]
-
-# Qt/GUI 相关建议不要进 zip（减少插件/资源加载问题；也便于排查缺文件）
 zip_include_packages = ["*"]
-
-zip_exclude_packages = [
-   "PyQt5",
-   "lark",
-   "pyocd",
-   "cmsis_pack_manager",
-    "qfluentwidgets",
-    "esptool",
-    "serial",
-]
-
-excludes = [
-
-    "matplotlib",
-    "backports",
-    "lib2to3",
-    "setuptools",
-    "tkinter",
-    "unittest",
-    "pylink",
-    "pyocd.probe.jlink_probe",
-    # --- capstone disassembly (~7 MB, not needed) ---
-    "capstone",
-    "capstone.lib",
-    # --- QtQuick / QML (not used) ---
-    "PyQt5.QtQuick",
-    "PyQt5.QtQml",
-    "PyQt5.QtQuickWidgets",
-    # --- Other unused Qt modules ---
-    "PyQt5.QtPrintSupport",
-    "PyQt5.QtSql",
-    "PyQt5.QtTest",
-    "PyQt5.QtHelp",
-    "PyQt5.QtMultimedia",
-    "PyQt5.QtMultimediaWidgets",
-    "PyQt5.QtPositioning",
-    "PyQt5.QtSensors",
-    "PyQt5.QtTextToSpeech",
-    "PyQt5.QtWinExtras",
-]
-
+zip_exclude_packages = ["PyQt5", "qfluentwidgets", "bleak", "winrt"]
+excludes = ["tkinter", "matplotlib", "pyocd", "esptool", "pyqtgraph"]
 optimize = 2
-
-# Windows 运行时更稳（避免目标机器缺 VC++ runtime）
 include_msvcr = true

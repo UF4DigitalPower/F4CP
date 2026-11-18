@@ -16,6 +16,9 @@ class Window(WindowShellMixin, NavigationMixin, ThemeBackgroundMixin, MSFluentWi
     """Main application window, composed from focused window concerns."""
 
     def __init__(self):
+        from config import cfg
+        from qfluentwidgets import setTheme
+        setTheme(cfg.themeMode.value, save=False)
         super().__init__()
         self.setObjectName("Window")
         self.initWindowShell()
@@ -35,3 +38,18 @@ class Window(WindowShellMixin, NavigationMixin, ThemeBackgroundMixin, MSFluentWi
 
     def showDynamicIsland(self, title: str, content: str = "", level: str = "info", duration: int = 3200):
         self.dynamicIsland.notify(title, content, level, duration)
+
+    def closeEvent(self, event):
+        from PyQt5.QtWidgets import QMessageBox
+        if self.homeInterface._upgrading:
+            if not self.homeInterface._can_cancel:
+                QMessageBox.information(self, "正在确认安装", "请等待固件安装及重连确认完成后退出。")
+                event.ignore()
+                return
+            if QMessageBox.question(self, "退出 F4CP", "退出会取消当前固件上传，是否继续？") != QMessageBox.Yes:
+                event.ignore()
+                return
+        if not self.homeInterface.shutdown():
+            event.ignore()
+            return
+        super().closeEvent(event)

@@ -26,6 +26,7 @@
     },
     "QFluentWidgets": {
         "FontFamilies": [
+            "Blender Pro Book",
             "Segoe UI",
             "Microsoft YaHei",
             "PingFang SC"
@@ -50,9 +51,9 @@
         "MicaEnabled": true
     },
     "VersionCurrent": {
-        "App": "2.0.0.A1",
+        "App": "3.0.0.A1",
         "Power": "v1.4.2",
-        "Upper": "v1.4.1"
+        "Upper": "v0.4.1"
     },
     "VersionLatest": {
         "App": "v1.1.0.RC1",
