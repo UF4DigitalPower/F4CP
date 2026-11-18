@@ -39,7 +39,6 @@ class ProfilePage(ScrollArea):
         widget, layout = page_content(self, "ProfilePage", "应用信息", "应用版本、源码仓库与软件著作权登记信息。")
 
         self.identityCard = SimpleCardWidget(widget)
-        self.identityCard.setBorderRadius(16)
         identity = QVBoxLayout(self.identityCard)
         identity.setContentsMargins(24, 20, 24, 20)
         identity.setSpacing(6)
@@ -91,7 +90,7 @@ class ProfilePage(ScrollArea):
         CTX.versions.changed.connect(self._refresh)
         self._refresh()
         for card in (self.projectCard, self.repositoryCard, self.copyrightCard):
-            card.setExpand(True)
+            card.expandInitially()
 
     def _refresh(self, *_):
         try:

@@ -12,7 +12,7 @@
 # -------------------------------
 
 from PyQt5.QtCore import QSize, Qt, QUrl, QTimer
-from PyQt5.QtGui import QColor, QDesktopServices, QFont, QImage
+from PyQt5.QtGui import QColor, QDesktopServices, QFont, QIcon, QImage
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import (
     BodyLabel,
@@ -32,12 +32,12 @@ from config import CTX, AppIconPath
 from app.manager import StyleSheet, update_manager
 from .page_layout import page_content, section
 from app.widgets.components.software_update_card import SoftwareUpdateCard
+from app.widgets.components.expandable_info_card import ExpandableInfoCard
 from app.widgets.components.workspace_widgets import HeroBanner, ShortcutCard
 
-class AppInfoCard(SimpleCardWidget):
+class AppInfoCard(ExpandableInfoCard):
     def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setBorderRadius(16)
+        super().__init__(QIcon(AppIconPath), "APP", "F4CP 桌面客户端 · 版本信息与软件更新", parent)
         self.iconLabel = ImageLabel(QImage(AppIconPath), self)
         self.iconLabel.setBorderRadius(8, 8, 8, 8)
         self.iconLabel.scaledToWidth(72)
@@ -68,7 +68,7 @@ class AppInfoCard(SimpleCardWidget):
         self.shareButton.setFixedSize(32, 32)
         self.shareButton.setIconSize(QSize(15, 15))
 
-        self.mainLayout = QVBoxLayout(self)
+        self.mainLayout = self.bodyLayout
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
         self.mainLayout.setSpacing(0)
         self.hBoxLayout = QHBoxLayout()
@@ -78,12 +78,14 @@ class AppInfoCard(SimpleCardWidget):
         self.buttonLayout = QHBoxLayout()
 
         self.initLayout()
+        self.addWidget(self.installButton)
         self.applyTexts()
         self.softwareUpdateCard = SoftwareUpdateCard(self, embedded=True)
         detailsLayout = QVBoxLayout()
         detailsLayout.setContentsMargins(24, 0, 24, 24)
         detailsLayout.addWidget(self.softwareUpdateCard)
         self.mainLayout.addLayout(detailsLayout)
+        self.expandInitially()
 
     def initLayout(self):
         self.hBoxLayout.setSpacing(22)
@@ -97,7 +99,6 @@ class AppInfoCard(SimpleCardWidget):
         self.vBoxLayout.addLayout(self.topLayout)
         self.topLayout.setContentsMargins(0, 0, 0, 0)
         self.topLayout.addWidget(self.nameLabel)
-        self.topLayout.addWidget(self.installButton, 0, Qt.AlignRight)
 
         self.vBoxLayout.addSpacing(3)
         self.vBoxLayout.addWidget(self.companyLabel)
@@ -207,6 +208,7 @@ class HomePage(ScrollArea):
     def _applyVersionSnapshot(self, snapshot):
         self.appCard.tagButton1.setText(snapshot.app.current or "--")
         self.appCard.tagButton1.setFixedWidth(130)
+        self.appCard.card.setContent(f"F4CP 桌面客户端 · {snapshot.app.current or '--'}")
 
     def _open_page(self, name):
         window = self.window()
@@ -216,6 +218,7 @@ class HomePage(ScrollArea):
             window.navigationInterface.setCurrentItem(page.objectName())
 
     def requestUpdateCheck(self):
+        self.appCard.setExpand(True)
         self.softwareUpdateCard.checkForUpdates()
 
     def _checkAtStartup(self):

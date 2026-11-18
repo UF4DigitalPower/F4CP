@@ -207,17 +207,19 @@ EXE 启动检查见 `output/remove-wch-startup.log`。
 
 设置页保留主题、主题色、字体、高 DPI、启动检查更新和预发布版本选项。
 个人页以软件 ICO 和名称为顶部标识，项目详情、源码仓库与知识产权三张卡片垂直排列，
-默认展开；点击标题栏或右侧箭头可独立收起，键盘空格与回车也可操作。
+使用 QFluentWidgets 原生 `SimpleExpandGroupSettingCard`，标题栏、箭头、边框和折叠动画
+沿用组件原样式；仅适配多行资料的内容高度。默认展开；点击标题栏或右侧箭头可独立收起，
+聚焦箭头后键盘空格与回车也可操作。顶部标识卡片同样使用原生默认圆角。
 去掉页底版权和版本栏，当前版本在项目详情内查看。框架、仓库和许可证使用工程真实信息。
 软著信息从 `src/config/profile.json` 读取：`SoftwareName`、`Owner`、`CertificateNumber`、
 `RegistrationNumber`、`AcquisitionMethod`、`RightsScope` 和 `RegistrationDate`。
 已按用户提供填写何平、软著登字第18166005号、2026SR0951724、原始取得及全部权利；
 未提供的登记日期显示“待补充”。重新打开个人页可刷新资料，版本跟随工程版本。
 折叠界面的测试、模拟字段核对、深浅主题和900/1200宽度检查记录为
-`output/profile-collapse-tests.log`、`output/profile-collapse-render.log`；同时检查标题/箭头点击、
-键盘操作、独立收起与布局缩短，预览为 `output/profile-collapse-preview.png`。
-EXE构建、模块与资料核对、启动记录为 `output/profile-collapse-package.log`、
-`output/profile-collapse-package-check.log` 和 `output/profile-collapse-startup.log`，未操作硬件。
+`output/profile-native-tests.log`、`output/profile-native-render.log`；同时检查原生组件、标题/箭头点击、
+键盘操作、独立收起与布局缩短，预览为 `output/profile-native-preview.png`。
+EXE构建、模块与资料核对、启动记录为 `output/profile-native-package.log`、
+`output/profile-native-package-check.log` 和 `output/profile-native-startup.log`，未操作硬件。
 
 ## 验证与打包
 
@@ -289,7 +291,10 @@ uv run cxfreeze build
 
 ## 软件更新
 
-在首页应用卡片右上角点击“检查更新”，检查结果和下载控件直接显示在下方子卡片。默认检查
+首页 APP 卡片与个人页共用 QFluentWidgets 原生展开卡片，默认展开，点击标题栏或箭头可收起。
+收起时仍显示软件当前版本与“检查更新”按钮；点击检查会展开内容，显示版本说明与更新结果。
+下载区域与进度出现时自动适配内容高度，后台状态更新保留用户的收起选择。
+在标题栏右侧点击“检查更新”，检查结果和下载控件直接显示在下方子卡片。默认检查
 `UF4DigitalPower/F4CP` 的正式 Release，根据语义版本号判断是否需要更新；开发版不会被旧版 Release 降级。
 “设置 → 启动”可开启启动检查和包含预发布版本（Alpha、Beta、RC）。
 
@@ -303,13 +308,14 @@ uv run cxfreeze build
 相同时可显示对应发布说明，旧版 Release 不会替换当前版本介绍或触发降级下载。
 自动检查失败时保留当前版本介绍，并在卡片内显示错误。深色与浅色主题均支持说明文本显示。
 
-本轮 112 项上位机测试通过，包含首页版本说明、更新下载/取消和版本同步；
-日志 `output/home-update-tests.log`。打包日志 `output/home-update-package.log`，
-交付目录隔离检查和 EXE 启动检查通过，见 `output/home-update-package-check.log`、
-`output/home-update-startup.log`。交付 `build/exe/F4CP.exe`，保留整个目录。
-首页预览为 `output/home-update-current.png`、
-`output/home-update-available.png` 和 `output/home-update-light.png`；新版预览使用模拟 Release，
-不表示已发布该版本。未连接或刷写真实设备。
+本轮 136 项上位机测试通过，包含首页版本说明、更新下载/取消和版本同步，
+日志 `output/home-app-tests.log`。原生展开、动态高度、深浅主题、窄窗口和键盘操作检查
+见 `output/home-app-render.log`，个人页回归记录为 `output/home-app-profile-check.log`。
+打包、模块核对和 EXE 启动记录为 `output/home-app-package.log`、
+`output/home-app-package-check.log`、`output/home-app-startup.log`。
+交付 `build/exe/F4CP.exe`，保留整个目录。预览为 `output/home-app-light.png`、
+`output/home-app-dark.png`、`output/home-app-collapsed.png`、`output/home-app-update.png`；
+新版预览使用模拟 Release，不表示已发布该版本。未连接或刷写真实设备。
 
 更新地址保存在 `src/config/config.json` 的 `Update.UpdateUrl`，支持 HTTPS GitHub 仓库、
 Release 页面或 API 地址。原先指向 `UF4OVER/UF4DigitalPower` 的默认软件地址会自动迁移；
