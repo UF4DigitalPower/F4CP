@@ -1,5 +1,6 @@
 """CH32V208 BLE transport. No Qt dependency; OTA is independently testable."""
 import asyncio
+import logging
 import struct
 import sys
 import time
@@ -7,6 +8,7 @@ import time
 from bleak.exc import BleakGATTProtocolError
 from .ota_package import TARGET, read_package, read_version
 from .usb_diagnostics import format_usb_diagnostics
+from .transfer_diagnostics import TransferDiagnostics
 
 SERVICE = "9e9a0010-5213-4592-8f04-554634504857"
 OTA = "9e9a0011-5213-4592-8f04-554634504857"
@@ -14,6 +16,7 @@ VERSION = "9e9a0012-5213-4592-8f04-554634504857"
 COMM = "9e9a0021-5213-4592-8f04-554634504857"
 NAME = "UF4Digitalpower V3"
 IDLE, ERASING, RECEIVING, CHECKING, READY, ERROR, COMMITTED = range(7)
+LOGGER = logging.getLogger("F4CP.BLE")
 
 
 class UploadCancelled(Exception):
@@ -88,7 +91,9 @@ class BleDevice:
         self.client = self.client_factory(address, timeout=60, pair=pair,
                                           winrt={"use_cached_services": False},
                                           disconnected_callback=lambda _: self.changed(False))
+        stage = "Windows 建链、口令配对及服务发现"
         try:
+            LOGGER.info("BLE connect: %s, pair=%s", address, pair)
             await self.client.connect()
             if not self.client.services.get_service(SERVICE):
                 raise ValueError("未发现 OTA 服务，请先烧录 factory.hex")
@@ -99,7 +104,9 @@ class BleDevice:
             while True:
                 self.require_connection()
                 try:
+                    stage = "读取受保护的运行固件版本"
                     version = decode_version(bytes(await self.client.read_gatt_char(VERSION)))
+                    stage = "读取受保护的 OTA 状态"
                     await self.status()
                     break
                 except BleakGATTProtocolError as exc:
@@ -113,8 +120,21 @@ class BleDevice:
                         raise RuntimeError(AUTHENTICATION_FAILED) from exc
                     await asyncio.sleep(min(0.3, remaining))
             self.version = version
-        except BaseException:
-            await self.disconnect()
+        except BaseException as exc:
+            if not isinstance(exc, asyncio.CancelledError):
+                LOGGER.exception("BLE 连接失败阶段：%s", stage)
+                if isinstance(exc, OSError):
+                    self.message(f"BLE 连接失败阶段：{stage}；详细调用位置已写入日志")
+                    if (stage == "Windows 建链、口令配对及服务发现"
+                            and getattr(exc, "winerror", None) == -2147024874):
+                        self.message("Windows 服务发现错误 0x80070016：若刚升级设备固件，"
+                                     "旧 GATT 属性缓存可能未刷新。可点击“重新配对”刷新所选设备的电脑端绑定。")
+            try:
+                await self.disconnect()
+            except Exception:
+                # Preserve the original failure, rather than replacing it with
+                # a secondary Windows error while releasing the failed session.
+                LOGGER.exception("BLE 连接失败后的资源释放也发生错误")
             raise
         self.changed(True)
         return self.version
@@ -213,6 +233,7 @@ class BleDevice:
             raise ValueError("升级包超过设备可用空间")
         committed = False
         started = False
+        diagnostics = None
 
         def check_cancel():
             if cancelled():
@@ -261,6 +282,10 @@ class BleDevice:
                 await asyncio.sleep(0.15)
             mode = f"连续发送 · {window} 包/组" if fast else "逐包确认"
             phase(f"正在上传 · {mode} · {chunk} 字节/包", True)
+            diagnostics = TransferDiagnostics(
+                "V208 OTA", self.message, version=self.version, mtu=self.client.mtu_size,
+                write_limit=characteristic.max_write_without_response_size if fast else None,
+                chunk=chunk, window=window, streaming=fast)
             begun = time.monotonic()
             done = retries = 0
             while done < len(image):
@@ -270,14 +295,16 @@ class BleDevice:
                     check_cancel()
                     offset = boundaries[-1]
                     payload = image[offset:offset + chunk]
-                    await self.client.write_gatt_char(OTA, b"\x02" + struct.pack("<I", offset) + payload, response=not fast)
+                    with diagnostics.measure("write", payload_size=len(payload)):
+                        await self.client.write_gatt_char(OTA, b"\x02" + struct.pack("<I", offset) + payload, response=not fast)
                     boundaries.append(offset + len(payload))
                     await asyncio.sleep(0)
                     if boundaries[-1] == len(image):
                         break
                 # ATT read follows the queued DATA on the same bearer. Only
                 # the device's persisted, read-back-verified offset is progress.
-                current = await self.status()
+                with diagnostics.measure("read"):
+                    current = await self.status()
                 confirmed = current[1]
                 if (current[0] != RECEIVING or current[2:4] != (len(image), checksum)
                         or confirmed not in boundaries or (not fast and confirmed != boundaries[-1])):
@@ -286,9 +313,11 @@ class BleDevice:
                 if retries > 3:
                     raise RuntimeError("设备接收偏移连续重传失败，请重新连接后升级")
                 done = confirmed
+                diagnostics.confirm(done, boundaries[-1])
                 elapsed = max(0.001, time.monotonic() - begun)
                 speed = done / elapsed
                 progress(done, len(image), speed, (len(image) - done) / speed if speed else 0)
+            diagnostics.finish("传输结束（待 CRC 与安装确认）")
             phase("正在校验完整固件 CRC32", True)
             await self.client.write_gatt_char(OTA, b"\x03", response=True)
             ready = await wait_state(READY)
@@ -321,6 +350,8 @@ class BleDevice:
                 await asyncio.sleep(2)
             raise InstallationUnconfirmed(f"已尝试提交，但未确认安装结果：{last_error}。可重新连接核对版本，必要时重新上电。")
         finally:
+            if diagnostics is not None:
+                diagnostics.finish("传输中断")
             if started and not committed and self.connected:
                 try:
                     await self.client.write_gatt_char(OTA, b"\x04", response=True)

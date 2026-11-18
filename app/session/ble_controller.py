@@ -1,9 +1,12 @@
 """Keep WinRT BLE and its asyncio loop on one worker thread."""
 import asyncio
+import logging
 import threading
 
 from PyQt5.QtCore import QThread, pyqtSignal
 from app.protocol.ble_device import BleDevice, NAME, SERVICE, UploadCancelled, version_text
+
+LOGGER = logging.getLogger("F4CP.BLEController")
 
 
 class BleController(QThread):
@@ -58,6 +61,7 @@ class BleController(QThread):
             except UploadCancelled:
                 self.result.emit(False, "下载已取消，未提交安装或目标烧录")
             except Exception as exc:
+                LOGGER.exception("BLE 操作失败：%s", action)
                 self.result.emit(False, str(exc))
             finally:
                 self._busy = False

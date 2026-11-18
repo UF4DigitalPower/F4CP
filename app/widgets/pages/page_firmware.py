@@ -1,18 +1,26 @@
 """One firmware workspace for V208/G474, wired and authenticated wireless transfers."""
+import logging
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFileDialog, QGridLayout, QHBoxLayout, QMessageBox, QVBoxLayout, QWidget
 from qfluentwidgets import (BodyLabel, CaptionLabel, ComboBox, InfoBar, LineEdit,
-    FluentIcon as FIF, PrimaryPushButton, ProgressBar, PushButton, ScrollArea, TextEdit)
+    FluentIcon as FIF, PrimaryPushButton, ProgressBar, PushButton, ScrollArea)
 
 from app.protocol.firmware_download import G474, V208, WIRED, WIRELESS, load_firmware
 from .page_layout import page_content, section
 from .device_connection_panel import DeviceConnectionPanel
 from app.session.pyocd_programmer import PyOcdWorker
 from config import CTX
+from app.widgets.components.runtime_log import RuntimeLogDialog
+from app.widgets.components.chip import ChipTone, StatusChip
+from app.widgets.components.workspace_widgets import FirmwareDropZone, ResponsiveColumns, TaskSteps, metric_box
+
+LOGGER = logging.getLogger("F4CP.Firmware")
 
 
 class FirmwarePage(ScrollArea):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.logDialog = RuntimeLogDialog(self)
         self.blePanel = DeviceConnectionPanel(self)
         self.controller = self.blePanel.controller
         self._pyocd_worker = None
@@ -21,9 +29,8 @@ class FirmwarePage(ScrollArea):
         self._active = self._can_cancel = False
         self._path = ""
         self._firmware = None
-        content, layout = page_content(self, "FirmwarePage", "固件下载", "V208 / G474 固件烧录与无线升级")
-
-        card, body = section(content, "连接与目标", "")
+        content, layout = page_content(self, "FirmwarePage", "固件下载", "连接设备，选择镜像，跟踪每一步写入与校验。")
+        card, body = section(content, "01  连接与目标", "选择芯片与传输方式", icon=FIF.CONNECT)
         self.connectionCard = card
         grid = QGridLayout()
         grid.setHorizontalSpacing(12)
@@ -33,12 +40,10 @@ class FirmwarePage(ScrollArea):
         self.targetCombo.addItem("STM32G474RBT6", userData=G474)
         self.modeCombo = ComboBox(card)
         self.modeCombo.addItem("无线（BLE）", userData=WIRELESS)
-        grid.addWidget(BodyLabel("目标芯片", card), 0, 0)
-        grid.addWidget(self.targetCombo, 0, 1)
-        grid.addWidget(BodyLabel("连接方式", card), 0, 2)
-        grid.addWidget(self.modeCombo, 0, 3)
-        grid.setColumnStretch(1, 1)
-        grid.setColumnStretch(3, 1)
+        grid.addWidget(CaptionLabel("目标芯片", card), 0, 0)
+        grid.addWidget(self.targetCombo, 1, 0)
+        grid.addWidget(CaptionLabel("连接方式", card), 2, 0)
+        grid.addWidget(self.modeCombo, 3, 0)
         body.addLayout(grid)
         self.hintLabel = CaptionLabel(card)
         self.hintLabel.setWordWrap(True)
@@ -56,9 +61,10 @@ class FirmwarePage(ScrollArea):
         self.probeCombo.setPlaceholderText("请扫描 DAPLink 探针")
         self.scanProbeButton = PushButton(FIF.SYNC, "扫描探针", self.pyocdCard)
         self.connectProbeButton = PushButton(FIF.LINK, "连接 / 识别", self.pyocdCard)
-        row.addWidget(self.probeCombo, 1)
+        probe_layout.addWidget(self.probeCombo)
         row.addWidget(self.scanProbeButton)
         row.addWidget(self.connectProbeButton)
+        row.addStretch()
         probe_layout.addLayout(row)
         grid = QGridLayout()
         grid.setHorizontalSpacing(12)
@@ -67,12 +73,11 @@ class FirmwarePage(ScrollArea):
             self.frequencyCombo.addItem(text, userData=value)
         self.connectModeCombo = ComboBox(self.pyocdCard)
         self.connectModeCombo.addItems(["under-reset", "halt", "pre-reset", "attach"])
-        grid.addWidget(BodyLabel("SWD 频率", self.pyocdCard), 0, 0)
+        grid.addWidget(CaptionLabel("SWD 频率", self.pyocdCard), 0, 0)
         grid.addWidget(self.frequencyCombo, 0, 1)
-        grid.addWidget(BodyLabel("连接模式", self.pyocdCard), 0, 2)
-        grid.addWidget(self.connectModeCombo, 0, 3)
+        grid.addWidget(CaptionLabel("连接模式", self.pyocdCard), 1, 0)
+        grid.addWidget(self.connectModeCombo, 1, 1)
         grid.setColumnStretch(1, 1)
-        grid.setColumnStretch(3, 1)
         probe_layout.addLayout(grid)
         self.probeInfoLabel = CaptionLabel("pyOCD · STM32G474RBTx · 本地 STM32G4 Pack", self.pyocdCard)
         self.probeInfoLabel.setWordWrap(True)
@@ -81,10 +86,11 @@ class FirmwarePage(ScrollArea):
         self.connectProbeButton.clicked.connect(lambda: self._start_pyocd("connect"))
         connection_body.addWidget(self.pyocdCard)
         connection_body.addWidget(self.hintLabel)
-        layout.addWidget(card)
-
-        card, body = section(content, "固件下载", "")
+        card, body = section(content, "02  固件与任务", "拖放或浏览选择所需固件", icon=FIF.DOWNLOAD)
         self.downloadCard = card
+        self.dropZone = FirmwareDropZone(card)
+        self.dropZone.fileDropped.connect(self._select_file)
+        body.addWidget(self.dropZone)
         row = QHBoxLayout()
         self.pathEdit = LineEdit(card)
         self.pathEdit.setReadOnly(True)
@@ -102,23 +108,38 @@ class FirmwarePage(ScrollArea):
         self.progressBar.setValue(0)
         self.progressLabel = CaptionLabel("等待下载", card)
         self.progressLabel.setWordWrap(True)
-        for widget in (self.packageLabel, self.progressBar, self.progressLabel):
-            body.addWidget(widget)
+        self.phaseLabel = BodyLabel("就绪", card)
+        self.phaseLabel.setWordWrap(True)
+        body.addWidget(self.packageLabel)
+        self.taskSteps = TaskSteps(card)
+        body.addWidget(self.taskSteps)
+        phase_row = QHBoxLayout()
+        phase_row.addWidget(self.phaseLabel, 1)
+        self.taskChip = StatusChip("等待开始", parent=card)
+        phase_row.addWidget(self.taskChip, 0, Qt.AlignRight)
+        body.addLayout(phase_row)
+        self.resultLabel = BodyLabel(card)
+        self.resultLabel.setWordWrap(True)
+        self.resultLabel.hide()
+        body.addWidget(self.resultLabel)
+        body.addWidget(self.progressBar)
+        metrics = QHBoxLayout()
+        self.speedLabel = CaptionLabel("速度 —", card)
+        self.remainingLabel = CaptionLabel("剩余时间 —", card)
+        metrics.setSpacing(8)
+        metrics.addWidget(metric_box("传输数据", self.progressLabel, card), 1)
+        metrics.addWidget(metric_box("上传速度", self.speedLabel, card), 1)
+        metrics.addWidget(metric_box("预计剩余", self.remainingLabel, card), 1)
+        body.addLayout(metrics)
         actions = QHBoxLayout()
         self.validationLabel = CaptionLabel("写入校验 · 完成后复位运行", card)
-        actions.addWidget(self.validationLabel)
+        body.addWidget(self.validationLabel)
         actions.addStretch()
         actions.addWidget(self.cancelButton)
         actions.addWidget(self.startButton)
         body.addLayout(actions)
-        layout.addWidget(card)
-        card, body = section(content, "下载日志", "")
-        self.log = TextEdit(card)
-        self.log.setReadOnly(True)
-        self.log.setMinimumHeight(180)
-        self.log.document().setMaximumBlockCount(600)
-        body.addWidget(self.log)
-        layout.addWidget(card)
+        self.workspace = ResponsiveColumns(self.connectionCard, self.downloadCard, content)
+        layout.addWidget(self.workspace)
         layout.addStretch()
 
         self.fileButton.clicked.connect(self._file)
@@ -132,7 +153,6 @@ class FirmwarePage(ScrollArea):
         self.controller.progress.connect(self._progress)
         self.controller.result.connect(self._result)
         self.controller.busy.connect(self._busy_changed)
-        self.controller.message.connect(self._message)
         self.controller.version.connect(lambda text: self._sync())
         self._selection()
 
@@ -174,6 +194,21 @@ class FirmwarePage(ScrollArea):
         self.progressBar.setRange(0, 100)
         self.progressBar.setValue(0)
         self.progressLabel.setText("等待下载")
+        self.phaseLabel.setText("就绪")
+        self.speedLabel.setText("速度 —")
+        self.remainingLabel.setText("剩余时间 —")
+        self.dropZone.setFile()
+        formats = ".ota 升级包" if self.target == V208 else ".bin 固件" if self.wireless else ".hex / .bin 固件"
+        self.dropZone.subtitleLabel.setText("支持 " + formats + " · 也可点击下方“浏览”")
+        self.taskSteps.titles = (("准备", "上传", "烧录 / 安装", "完成确认") if self.wireless else
+                                 ("准备", "写入", "读回校验", "完成确认"))
+        self.taskSteps.setState()
+        self.taskChip.setText("等待开始")
+        self.taskChip.setTone(ChipTone.NEUTRAL)
+        self.resultLabel.clear()
+        self.resultLabel.hide()
+        self.validationLabel.setText("安装后自动重连 · 核对运行版本和 CRC32" if self.target == V208 else
+                                     "完整读回校验 · 完成后复位运行")
         self._sync()
 
     def _sync(self, *_):
@@ -181,6 +216,7 @@ class FirmwarePage(ScrollArea):
         for widget in (self.targetCombo, self.fileButton,
                        self.probeCombo, self.scanProbeButton, self.frequencyCombo, self.connectModeCombo):
             widget.setEnabled(idle)
+        self.dropZone.setEnabled(idle)
         self.modeCombo.setEnabled(idle and self.target == G474)
         ready = bool(self._firmware)
         if self.wireless:
@@ -209,6 +245,7 @@ class FirmwarePage(ScrollArea):
         self._can_cancel = False
         self._pyocd_action = action
         self._pyocd_outcome = None
+        self.resultLabel.hide()
         self.blePanel._external_busy = True
         self.blePanel._sync()
         pack = CTX.dirs.McuPackDir / "UF4.STM32G4xx_DFP.2.2.0.pack"
@@ -217,16 +254,31 @@ class FirmwarePage(ScrollArea):
                              connect_mode=self.connectModeCombo.currentText(), firmware=firmware, parent=self)
         self._pyocd_worker = worker
         worker.probes.connect(self._probes)
-        worker.message.connect(self.log.append)
-        worker.progress.connect(self.progressBar.setValue)
+        worker.message.connect(self._pyocd_message)
+        worker.progress.connect(self._wired_progress)
         worker.result.connect(self._pyocd_result)
         worker.finished.connect(self._pyocd_finished)
         self.progressBar.setRange(0, 100)
         self.progressBar.setValue(0)
-        self.progressLabel.setText({"scan": "正在扫描 DAPLink 探针…", "connect": "pyOCD 正在连接和识别 G474…",
+        self.phaseLabel.setText({"scan": "正在扫描 DAPLink 探针…", "connect": "pyOCD 正在连接和识别 G474…",
                                     "program": "pyOCD 正在烧录 G474…"}[action])
+        self.taskSteps.titles = ("准备", "写入", "读回校验", "完成确认")
+        self._task_stage(1 if action == "program" else 0)
         worker.start()
         self._sync()
+
+    def _pyocd_message(self, text):
+        LOGGER.info(text)
+        if "DEV_ID" in text:
+            self.probeInfoLabel.setText(text)
+        if text.startswith(("pyOCD 正在", "正在读回", "pyOCD 写入")):
+            self.phaseLabel.setText(text)
+            if self._pyocd_action == "program":
+                self._task_stage(2 if "校验" in text or "读回" in text else 1)
+
+    def _wired_progress(self, value):
+        self.progressBar.setValue(value)
+        self.progressLabel.setText(f"进度 {value}% · 等待完整校验" if value >= 85 else f"进度 {value}%")
 
     def _probes(self, probes):
         uid = self.probeCombo.currentData()
@@ -248,6 +300,7 @@ class FirmwarePage(ScrollArea):
         self._finish(*outcome)
         if self._pyocd_action != "program":
             self.progressBar.setValue(0)
+            self.taskSteps.setState()
         worker.deleteLater()
 
     def shutdown(self):
@@ -263,13 +316,20 @@ class FirmwarePage(ScrollArea):
         path, _ = QFileDialog.getOpenFileName(self, "选择固件", self._path, filters)
         if not path:
             return
+        self._select_file(path)
+
+    def _select_file(self, path):
+        if self._active or self.blePanel._busy or self.blePanel._closing:
+            return
         self._clear_file()
         try:
             self._firmware = self._load(path)
             self._path = path
             self.pathEdit.setText(path)
+            self.dropZone.setFile(path)
             self.packageLabel.setText(self._firmware.summary)
             self.progressLabel.setText("文件检查通过")
+            LOGGER.info("已选择固件：%s · %s · %s", self.targetCombo.currentText(), self.modeCombo.currentText(), self._firmware.summary)
         except Exception as exc:
             self._notify(False, str(exc))
         self._sync()
@@ -288,10 +348,16 @@ class FirmwarePage(ScrollArea):
                 return
             self._active = True
             self._can_cancel = self.wireless
+            self.resultLabel.hide()
             self.progressBar.setRange(0, 100)
             self.progressBar.setValue(0)
-            self.progressLabel.setText("正在准备下载…")
-            self.log.append(self.targetCombo.currentText() + " · " + self.modeCombo.currentText() + "\n" + firmware.summary)
+            self.phaseLabel.setText("正在准备下载…")
+            self.taskSteps.titles = ("准备", "上传", "烧录 / 安装", "完成确认")
+            self._task_stage(0)
+            self.progressLabel.setText("等待传输")
+            self.speedLabel.setText("速度 —")
+            self.remainingLabel.setText("剩余时间 —")
+            LOGGER.info("开始下载：%s · %s · %s", self.targetCombo.currentText(), self.modeCombo.currentText(), firmware.summary)
             if self.wireless:
                 if not self.controller.submit("upload" if self.target == V208 else "target_upload", firmware.data):
                     raise RuntimeError("设备正忙或连接线程未就绪")
@@ -304,18 +370,31 @@ class FirmwarePage(ScrollArea):
     def _phase(self, text, can_cancel):
         if self._active and self.wireless:
             self._can_cancel = can_cancel
-            self.progressLabel.setText(text)
-            self.log.append(text)
+            self.phaseLabel.setText(text.split(" · ", 1)[0])
+            if "完成" in text or "读回" in text:
+                self._task_stage(3)
+            elif "烧录" in text or "安装" in text or "SWD" in text or text.startswith(("擦除 G474", "写入 G474")):
+                self._task_stage(2)
+            elif "重连" in text:
+                self._task_stage(3)
+            elif "上传" in text or "CRC" in text:
+                self._task_stage(1)
+            LOGGER.info(text)
+            if not can_cancel:
+                self.remainingLabel.setText("等待校验与完成确认")
             self._sync()
+
+    def _task_stage(self, stage):
+        self.taskSteps.setState(stage)
+        self.taskChip.setText("进行中")
+        self.taskChip.setTone(ChipTone.NEUTRAL)
 
     def _progress(self, done, total, speed, remaining):
         if self._active and self.wireless:
             self.progressBar.setValue(done * 95 // max(1, total))
-            self.progressLabel.setText(f"正在上传 {done:,} / {total:,} B · {speed / 1024:.1f} KiB/s · 剩余约 {remaining:.0f} 秒")
-
-    def _message(self, text):
-        if self._active and self.wireless:
-            self.log.append(text)
+            self.progressLabel.setText(f"已上传 {done:,} / {total:,} B")
+            self.speedLabel.setText(f"{speed / 1024:.1f} KiB/s")
+            self.remainingLabel.setText(f"约 {remaining:.0f} 秒")
 
     def _result(self, success, text):
         if self._active and self.wireless:
@@ -330,7 +409,7 @@ class FirmwarePage(ScrollArea):
         if self._active and self._can_cancel:
             self.controller.cancel()
             self._can_cancel = False
-            self.progressLabel.setText("正在取消上传…")
+            self.phaseLabel.setText("正在取消上传…")
             self._sync()
 
     def _finish(self, success, text):
@@ -340,10 +419,20 @@ class FirmwarePage(ScrollArea):
         self.progressBar.setRange(0, 100)
         if success:
             self.progressBar.setValue(100)
-        self.progressLabel.setText(text)
-        self.log.append(text)
+        completed = "下载完成" if self.wireless or self._pyocd_action == "program" else (
+            "扫描完成" if self._pyocd_action == "scan" else "识别完成")
+        self.phaseLabel.setText(completed if success else "操作未完成")
+        self.resultLabel.setText(text)
+        self.resultLabel.setTextColor("#147d56" if success else "#b91c1c", "#6ed6ab" if success else "#f49393")
+        self.resultLabel.show()
+        self.remainingLabel.setText("—")
+        self.taskSteps.setState(max(0, self.taskSteps.stage), success)
+        self.taskChip.setText("已完成" if success else "未完成")
+        self.taskChip.setTone(ChipTone.SUCCESS if success else ChipTone.DANGER)
+        (LOGGER.info if success else LOGGER.error)(text)
         self._notify(success, text)
         self._sync()
 
     def _notify(self, success, text):
-        (InfoBar.success if success else InfoBar.error)("下载完成" if success else "操作未完成", text, duration=6000, parent=self)
+        (InfoBar.success if success else InfoBar.error)("操作完成" if success else "操作未完成", text,
+                                                      duration=6000 if success else -1, parent=self)

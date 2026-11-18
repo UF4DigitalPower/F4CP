@@ -1,5 +1,6 @@
 """Windows PIN pairing for the board's DISPLAY_ONLY / MITM configuration."""
 import asyncio
+import logging
 
 from bleak.backends.winrt.client import BleakClientWinRT
 from winrt.windows.devices.enumeration import (
@@ -8,10 +9,12 @@ from winrt.windows.devices.enumeration import (
 )
 
 PASSKEY = "005213"
+LOGGER = logging.getLogger("F4CP.WindowsPairing")
 
 
 async def pair_with_passkey(pairing):
     if pairing.is_paired:
+        LOGGER.info("Windows 已存在所选设备绑定，保留绑定")
         return
     if not pairing.can_pair:
         raise RuntimeError("Windows 暂时不能配对此设备，请重新扫描后重试")
@@ -23,6 +26,7 @@ async def pair_with_passkey(pairing):
     custom = pairing.custom
     token = custom.add_pairing_requested(requested)
     try:
+        LOGGER.info("Windows 开始 PROVIDE_PIN 认证加密配对")
         async with asyncio.timeout(60):
             # Do not fall back to unauthenticated Just Works pairing: all UF4
             # business characteristics require an authenticated encrypted link.
@@ -45,5 +49,7 @@ class Uf4WinRTClient(BleakClientWinRT):
         # uses a fixed displayed passkey, so support the Windows PROVIDE_PIN event.
         if self._requester is None:
             raise RuntimeError("Windows 蓝牙设备尚未就绪")
+        LOGGER.info("Windows 正在读取所选设备的配对信息")
         information = await DeviceInformation.create_from_id_async(self._requester.device_information.id)
         await pair_with_passkey(information.pairing)
+        LOGGER.info("Windows 配对检查完成，继续建立 GATT 会话及发现服务")

@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtWidgets import QApplication
-from qfluentwidgets import MSFluentWindow
+from PyQt5.QtWidgets import QApplication, QHBoxLayout, QWidget
+from qfluentwidgets import FluentIcon as FIF, MSFluentWindow, PushButton
 
 from app.widgets.components import DynamicIsland
 
@@ -30,9 +30,24 @@ class Window(WindowShellMixin, NavigationMixin, ThemeBackgroundMixin, MSFluentWi
         self.titleBar.raise_()
         self.titleBar.setAttribute(Qt.WidgetAttribute.WA_StyledBackground)
 
-        self.dynamicIsland = DynamicIsland(self.titleBar)
-        self.dynamicIsland.recenter()
+        titleLayout = self.titleBar.hBoxLayout
+        self.notificationArea = QWidget(self.titleBar)
+        spacerIndex = titleLayout.count() - 2
+        titleLayout.takeAt(spacerIndex)
+        titleLayout.insertWidget(spacerIndex, self.notificationArea, 1)
+        notificationLayout = QHBoxLayout(self.notificationArea)
+        notificationLayout.setContentsMargins(12, 0, 12, 0)
+        notificationLayout.addStretch()
+        self.dynamicIsland = DynamicIsland(self.notificationArea)
+        notificationLayout.addWidget(self.dynamicIsland, 0, Qt.AlignVCenter)
+        notificationLayout.addStretch()
         self.dynamicIsland.raise_()
+
+        self.logButton = PushButton(FIF.DOCUMENT, "运行日志", self.titleBar)
+        self.logButton.setFixedHeight(32)
+        self.logButton.clicked.connect(self.firmwareInterface.logDialog.open_log)
+        titleLayout.insertWidget(titleLayout.count() - 1, self.logButton, 0, Qt.AlignVCenter)
+        titleLayout.insertSpacing(titleLayout.count() - 1, 12)
 
         self.initThemeBackground()
 

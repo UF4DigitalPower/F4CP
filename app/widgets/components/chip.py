@@ -17,7 +17,7 @@ from enum import Enum
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QLabel
-from qfluentwidgets import isDarkTheme, setFont
+from qfluentwidgets import isDarkTheme, qconfig, setFont
 
 
 class ChipTone(Enum):
@@ -59,6 +59,7 @@ class StatusChip(QLabel):
         self.setMinimumWidth(42)
         setFont(self, 11, QFont.DemiBold)
         self.refreshTheme()
+        qconfig.themeChangedFinished.connect(self.refreshTheme)
 
     def setTone(self, tone: ChipTone) -> None:
         self._tone = tone

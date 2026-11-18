@@ -26,52 +26,30 @@ from qfluentwidgets import (
     PrimaryPushButton,
     SimpleCardWidget,
     TransparentToolButton,
-    VerticalSeparator,
     setFont, ScrollArea,
 )
 from config import CTX, AppIconPath
 from app.manager import StyleSheet, update_manager
 from .page_layout import page_content, section
 from app.widgets.components.software_update_card import SoftwareUpdateCard
-
-class StatisticsWidget(QWidget):
-    def __init__(self, title: str, value: str, parent=None):
-        super().__init__(parent=parent)
-        self.titleLabel = CaptionLabel(title, self)
-        self.valueLabel = BodyLabel(value, self)
-        self.vBoxLayout = QVBoxLayout(self)
-
-        margin = 16
-        self.vBoxLayout.setContentsMargins(margin, 0, margin, 0)
-        self.vBoxLayout.addWidget(self.valueLabel, 0, Qt.AlignTop | Qt.AlignHCenter)
-        self.vBoxLayout.addWidget(self.titleLabel, 0, Qt.AlignBottom | Qt.AlignHCenter)
-
-        setFont(self.valueLabel, 18, QFont.DemiBold)
-        self.titleLabel.setTextColor(QColor(96, 96, 96), QColor(206, 206, 206))
-
-    def setTitle(self, title: str) -> None:
-        self.titleLabel.setText(title)
-
+from app.widgets.components.workspace_widgets import HeroBanner, ShortcutCard
 
 class AppInfoCard(SimpleCardWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setBorderRadius(16)
         self.iconLabel = ImageLabel(QImage(AppIconPath), self)
         self.iconLabel.setBorderRadius(8, 8, 8, 8)
-        self.iconLabel.scaledToWidth(120)
+        self.iconLabel.scaledToWidth(72)
 
-        self.nameLabel = BodyLabel("Fluor4CellPower", self)
-        setFont(self.nameLabel, 16, QFont.DemiBold)
+        self.nameLabel = BodyLabel("F4CP 桌面客户端", self)
+        setFont(self.nameLabel, 20, QFont.DemiBold)
 
         self.installButton = PrimaryPushButton(self)
         self.companyLabel = HyperlinkLabel(
             QUrl("https://github.com/UF4OVER"), "UF4OVER", self
         )
         self.installButton.setFixedWidth(160)
-
-        self.scoreWidget = StatisticsWidget("", "5.0", self)
-        self.separator = VerticalSeparator(self)
-        self.commentWidget = StatisticsWidget("", "3K", self)
 
         self.descriptionLabel = BodyLabel(self)
         self.descriptionLabel.setWordWrap(True)
@@ -97,7 +75,6 @@ class AppInfoCard(SimpleCardWidget):
         self.mainLayout.addLayout(self.hBoxLayout)
         self.vBoxLayout = QVBoxLayout()
         self.topLayout = QHBoxLayout()
-        self.statisticsLayout = QHBoxLayout()
         self.buttonLayout = QHBoxLayout()
 
         self.initLayout()
@@ -109,10 +86,10 @@ class AppInfoCard(SimpleCardWidget):
         self.mainLayout.addLayout(detailsLayout)
 
     def initLayout(self):
-        self.hBoxLayout.setSpacing(30)
-        self.hBoxLayout.setContentsMargins(34, 24, 24, 24)
-        self.hBoxLayout.addWidget(self.iconLabel)
-        self.hBoxLayout.addLayout(self.vBoxLayout)
+        self.hBoxLayout.setSpacing(22)
+        self.hBoxLayout.setContentsMargins(26, 24, 26, 20)
+        self.hBoxLayout.addWidget(self.iconLabel, 0, Qt.AlignTop)
+        self.hBoxLayout.addLayout(self.vBoxLayout, 1)
 
         self.vBoxLayout.setContentsMargins(0, 0, 0, 0)
         self.vBoxLayout.setSpacing(0)
@@ -124,16 +101,7 @@ class AppInfoCard(SimpleCardWidget):
 
         self.vBoxLayout.addSpacing(3)
         self.vBoxLayout.addWidget(self.companyLabel)
-        self.vBoxLayout.addSpacing(20)
-        self.vBoxLayout.addLayout(self.statisticsLayout)
-        self.statisticsLayout.setContentsMargins(0, 0, 0, 0)
-        self.statisticsLayout.setSpacing(10)
-        self.statisticsLayout.addWidget(self.scoreWidget)
-        self.statisticsLayout.addWidget(self.separator)
-        self.statisticsLayout.addWidget(self.commentWidget)
-        self.statisticsLayout.setAlignment(Qt.AlignLeft)
-
-        self.vBoxLayout.addSpacing(20)
+        self.vBoxLayout.addSpacing(12)
         self.vBoxLayout.addWidget(self.descriptionLabel)
 
         self.vBoxLayout.addSpacing(12)
@@ -149,13 +117,12 @@ class AppInfoCard(SimpleCardWidget):
             self.installButton.setText('检查中...')
         else:
             self.installButton.setText('检查更新')
-        self.scoreWidget.setTitle('评分')
-        self.commentWidget.setTitle('评论数')
         self.descriptionLabel.setText(
-            "Fluor4CellPower 是一个多功能上位机工具，提供串口通信、数据可视化和设备管理能力，用于电子设备调试和监控。"
+            "管理 UF4 设备的连接、固件与桌面软件版本。此处查看版本说明，检查并下载软件更新。"
         )
         self.tagButton1.setText('稳定版')
-        self.tagButton2.setText('上位机')
+        self.tagButton2.setText('桌面上位机')
+        self.tagButton2.setFixedWidth(108)
     def setCheckInProgress(self, checking: bool) -> None:
         self.installButton.setEnabled(not checking)
         self.applyTexts()
@@ -164,6 +131,7 @@ class AppInfoCard(SimpleCardWidget):
 class GalleryCard(HeaderCardWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setBorderRadius(16)
         self.flipView = HorizontalFlipView(self)
         self.expandButton = TransparentToolButton(FluentIcon.CHEVRON_RIGHT_MED, self)
 
@@ -184,7 +152,7 @@ class GalleryCard(HeaderCardWidget):
         self.applyTexts()
 
     def applyTexts(self):
-        self.setTitle('截图')
+        self.setTitle('UF4 · 项目预览')
 
 
 class HomePage(ScrollArea):
@@ -196,8 +164,21 @@ class HomePage(ScrollArea):
         self.scrollWidget = QWidget(self)
         self.scrollWidget.setObjectName("homeScrollWidget")
         self.vBoxLayout = QVBoxLayout(self.scrollWidget)
-        self.vBoxLayout.setContentsMargins(24, 24, 24, 24)
-        self.vBoxLayout.setSpacing(12)
+        self.vBoxLayout.setContentsMargins(28, 24, 28, 28)
+        self.vBoxLayout.setSpacing(18)
+        self.hero = HeroBanner("UF4 数字电源工作台", "设备连接、固件烧录与版本管理，集中在一个工作空间。", self.scrollWidget)
+        self.vBoxLayout.addWidget(self.hero)
+        shortcuts = QHBoxLayout()
+        shortcuts.setSpacing(14)
+        self.firmwareShortcut = ShortcutCard(FluentIcon.DOWNLOAD, "固件下载", "V208 / G474 · 无线与有线", self.scrollWidget)
+        self.settingsShortcut = ShortcutCard(FluentIcon.PALETTE, "个性化", "主题、颜色与全局字体", self.scrollWidget)
+        self.projectShortcut = ShortcutCard(FluentIcon.CODE, "个人与项目", "作者、许可与项目信息", self.scrollWidget)
+        for card in (self.firmwareShortcut, self.settingsShortcut, self.projectShortcut):
+            shortcuts.addWidget(card, 1)
+        self.firmwareShortcut.clicked.connect(lambda: self._open_page("firmwareInterface"))
+        self.settingsShortcut.clicked.connect(lambda: self._open_page("settingInterface"))
+        self.projectShortcut.clicked.connect(lambda: self._open_page("profileInterface"))
+        self.vBoxLayout.addLayout(shortcuts)
         self.appCard = AppInfoCard(self.scrollWidget)
         self.softwareUpdateCard = self.appCard.softwareUpdateCard
         self.galleryCard = GalleryCard(self.scrollWidget)
@@ -226,6 +207,13 @@ class HomePage(ScrollArea):
     def _applyVersionSnapshot(self, snapshot):
         self.appCard.tagButton1.setText(snapshot.app.current or "--")
         self.appCard.tagButton1.setFixedWidth(130)
+
+    def _open_page(self, name):
+        window = self.window()
+        page = getattr(window, name, None)
+        if page is not None and hasattr(window, "switchTo"):
+            window.switchTo(page)
+            window.navigationInterface.setCurrentItem(page.objectName())
 
     def requestUpdateCheck(self):
         self.softwareUpdateCard.checkForUpdates()

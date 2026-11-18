@@ -116,6 +116,9 @@ class DynamicIsland(QFrame):
         parent = self.parentWidget()
         if parent is None:
             return
+        if parent.layout() is not None and parent.layout().indexOf(self) >= 0:
+            parent.layout().activate()
+            return
         x = max(0, (parent.width() - self.width()) // 2)
         y = max(4, (parent.height() - self.height()) // 2)
         self.move(x, y)
@@ -124,7 +127,8 @@ class DynamicIsland(QFrame):
         parent = self.parentWidget()
         maxWidth = 520
         if parent is not None:
-            maxWidth = max(188, min(maxWidth, parent.width() - 220))
+            managed = parent.layout() is not None and parent.layout().indexOf(self) >= 0
+            maxWidth = max(188, min(maxWidth, parent.width() - (24 if managed else 220)))
         titleWidth = self.titleLabel.fontMetrics().horizontalAdvance(title or "通知")
         contentWidth = self.contentLabel.fontMetrics().horizontalAdvance(content or "")
         width = 54 + min(titleWidth, 150) + (min(contentWidth, 240) + 8 if content else 0)

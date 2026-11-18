@@ -20,7 +20,10 @@ class PageHeader(QWidget):
 
         self._textLayout = QVBoxLayout()
         self._textLayout.setContentsMargins(0, 0, 0, 0)
-        self._textLayout.setSpacing(2)
+        self._textLayout.setSpacing(6)
+        self.eyebrowLabel = CaptionLabel("UF4  /  WORKSPACE", self)
+        self.eyebrowLabel.setTextColor("#a34e3e", "#eea08c")
+        self._textLayout.addWidget(self.eyebrowLabel)
         self._textLayout.addWidget(self.titleLabel)
         self._textLayout.addWidget(self.subtitleLabel)
 
@@ -35,7 +38,8 @@ class PageHeader(QWidget):
         self.mainLayout.addLayout(self._textLayout, 1)
         self.mainLayout.addWidget(self.actionBox, 0, Qt.AlignTop)
 
-        self.setMinimumHeight(54)
+        self.subtitleLabel.setTextColor("#657085", "#a4aab7")
+        self.setMinimumHeight(82)
 
     def addAction(self, widget: QWidget) -> None:
         self.actionLayout.addWidget(widget)

@@ -1,12 +1,16 @@
 """Device connection, communication and firmware OTA workspace."""
+import logging
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
-from qfluentwidgets import (BodyLabel, CaptionLabel, CardWidget, ComboBox, InfoBar,
-    LineEdit, PrimaryPushButton, PushButton, ScrollArea, SubtitleLabel, TextEdit)
+from qfluentwidgets import (CaptionLabel, ComboBox, FluentIcon as FIF, InfoBar,
+    LineEdit, PrimaryPushButton, PushButton, TransparentPushButton)
+from app.widgets.components.chip import ChipTone, StatusChip
 from app.protocol.ble_device import FLASH_UNAVAILABLE, decode_device_info
 from app.session.ble_controller import BleController
 from .page_layout import section
 from config import CTX
+
+LOGGER = logging.getLogger("F4CP.Device")
 
 
 class DeviceConnectionPanel(QWidget):
@@ -21,42 +25,56 @@ class DeviceConnectionPanel(QWidget):
         layout.setSpacing(12)
         self._connected = self._busy = self._external_busy = self._closing = False
         self._flash_ready = False
-        card, body = section(content, "设备连接", "设备配对码为 005213，软件自动提交口令；若系统弹出提示，请按提示确认。")
+        card, body = section(content, "蓝牙设备", "配对码 005213 · 软件自动提交，按系统提示完成认证。", embedded=True)
         self.deviceCombo = ComboBox(card)
-        self.deviceCombo.setMinimumWidth(320)
-        self.scanButton = PushButton("扫描设备", card)
-        self.connectButton = PrimaryPushButton("连接", card)
+        self.deviceCombo.setMinimumWidth(0)
+        self.deviceCombo.setPlaceholderText("扫描并选择 UF4 设备")
+        self.scanButton = PushButton(FIF.SYNC, "扫描设备", card)
+        self.connectButton = PrimaryPushButton(FIF.LINK, "连接", card)
         self.disconnectButton = PushButton("断开", card)
-        self.repairButton = PushButton("重新配对", card)
+        self.repairButton = TransparentPushButton("重新配对", card)
         self.repairButton.setToolTip("清除所选设备在电脑上的绑定，再重新配对；用于刷机后认证失败")
         row = QHBoxLayout()
-        for w in (self.deviceCombo, self.scanButton, self.connectButton, self.disconnectButton, self.repairButton): row.addWidget(w)
+        body.addWidget(self.deviceCombo)
+        for w in (self.scanButton, self.connectButton, self.disconnectButton): row.addWidget(w)
+        row.addStretch()
+        row.addWidget(self.repairButton)
         body.addLayout(row)
-        self.connectionLabel = BodyLabel("未连接", card)
+        self.connectionLabel = StatusChip("未连接", parent=card)
         self.versionLabel = CaptionLabel("设备版本：--", card)
-        body.addWidget(self.connectionLabel)
+        status_row = QHBoxLayout()
+        status_row.addWidget(self.connectionLabel, 0, Qt.AlignLeft)
+        status_row.addStretch()
+        self.communicationButton = TransparentPushButton(FIF.CODE, "通信调试", card)
+        status_row.addWidget(self.communicationButton)
+        body.addLayout(status_row)
         body.addWidget(self.versionLabel)
+        self.activityLabel = CaptionLabel("等待扫描设备", card)
+        self.activityLabel.setWordWrap(True)
+        body.addWidget(self.activityLabel)
+        self.storageLabel = CaptionLabel("W25Q256：等待设备信息", card)
+        self.storageLabel.setWordWrap(True)
+        body.addWidget(self.storageLabel)
         layout.addWidget(card)
-        card, body = section(content, "设备通信", "读取设备与外部存储信息，或发送十六进制命令进行通信调试。")
+        card, body = section(content, "通信调试", "读取设备信息、发送十六进制命令；完整收发记录在运行日志中查看。")
+        self.communicationCard = card
+        card.setVisible(False)
+        self.communicationButton.clicked.connect(self._toggle_communication)
         row = QHBoxLayout()
         self.commandEdit = LineEdit(card)
         self.commandEdit.setPlaceholderText("例如：01 55 AA（回显）或 00（设备信息）")
         self.infoButton = PushButton("读取设备信息", card)
         self.usbButton = PushButton("USB诊断", card)
         self.sendButton = PushButton("发送", card)
-        row.addWidget(self.commandEdit, 1)
+        body.addWidget(self.commandEdit)
         row.addWidget(self.infoButton)
         row.addWidget(self.usbButton)
         row.addWidget(self.sendButton)
         body.addLayout(row)
-        self.storageLabel = CaptionLabel("W25Q256：等待设备信息", card)
-        self.storageLabel.setWordWrap(True)
-        self.log = TextEdit(card)
-        self.log.setReadOnly(True)
-        self.log.setMinimumHeight(150)
-        self.log.document().setMaximumBlockCount(500)
-        body.addWidget(self.storageLabel)
-        body.addWidget(self.log)
+        self.responseLabel = CaptionLabel("尚未收发通信数据", card)
+        self.responseLabel.setWordWrap(True)
+        self.responseLabel.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        body.addWidget(self.responseLabel)
         layout.addWidget(card)
         self.controller = BleController(self)
         for signal, slot in ((self.controller.devices, self._devices), (self.controller.connected, self._connection),
@@ -75,6 +93,11 @@ class DeviceConnectionPanel(QWidget):
         self.controller.start()
         self._sync()
 
+    def _toggle_communication(self):
+        opened = self.communicationCard.isHidden()
+        self.communicationCard.setVisible(opened)
+        self.communicationButton.setText("收起通信调试" if opened else "通信调试")
+
     def _sync(self):
         idle = self.controller.isRunning() and self.controller.loop is not None and not self._busy and not self._external_busy and not self._closing
         self.scanButton.setEnabled(idle and not self._connected)
@@ -89,6 +112,7 @@ class DeviceConnectionPanel(QWidget):
         self.deviceCombo.clear()
         for name, address, rssi in devices:
             self.deviceCombo.addItem(f"{name} · {address} · {rssi} dBm", userData=address)
+        self.activityLabel.setText(f"发现 {len(devices)} 台设备" if devices else "未发现设备，请确认设备已上电后重新扫描")
         self._sync()
 
     def _connect(self):
@@ -98,6 +122,8 @@ class DeviceConnectionPanel(QWidget):
     def _connection(self, connected):
         self._connected = connected
         self.connectionLabel.setText("已连接 · 安全链路" if connected else "未连接")
+        self.connectionLabel.setTone(ChipTone.SUCCESS if connected else ChipTone.NEUTRAL)
+        LOGGER.info("设备已连接，安全链路通过" if connected else "设备已断开")
         if not connected:
             self._flash_ready = False
             self.versionLabel.setText("设备版本：--")
@@ -111,6 +137,7 @@ class DeviceConnectionPanel(QWidget):
 
     def _version(self, version):
         self.versionLabel.setText("设备版本：" + version)
+        LOGGER.info("设备版本：%s", version)
         if self._connected:
             try: CTX.versions.set_current("Upper", version.split(" · ")[0])
             except Exception as exc: self._message(f"版本缓存保存失败：{exc}")
@@ -119,10 +146,18 @@ class DeviceConnectionPanel(QWidget):
         self._busy = busy
         self._sync()
 
-    def _message(self, message): self.log.append(message)
+    def _message(self, message):
+        # TransferDiagnostics already writes these records to the shared logger.
+        if message.startswith(("BLE 上传诊断 [", "BLE 上传耗时 [")):
+            return
+        LOGGER.info(message)
+        if not self._external_busy and not getattr(self.parent(), "_active", False):
+            self.activityLabel.setText(message if "\n" not in message else "诊断信息已生成，请查看运行日志")
 
     def _received(self, raw):
-        self._message("RX  " + raw.hex(" ").upper())
+        received = "RX  " + raw.hex(" ").upper()
+        LOGGER.info(received)
+        self.responseLabel.setText(received)
         if len(raw) == 20 and raw[0] == 1 and raw[2:4] == b"\x00\x00":
             try:
                 self._flash_ready, jedec, capacity, user_base = decode_device_info(raw)
@@ -141,16 +176,21 @@ class DeviceConnectionPanel(QWidget):
         try:
             payload = bytes.fromhex(self.commandEdit.text())
             if not 1 <= len(payload) <= 20: raise ValueError("请输入 1～20 字节的十六进制命令")
-            if self.controller.submit("exchange", payload): self._message("TX  " + payload.hex(" ").upper())
+            if self.controller.submit("exchange", payload):
+                text = "TX  " + payload.hex(" ").upper()
+                LOGGER.info(text)
+                self.responseLabel.setText(text)
         except ValueError as exc: self._result(False, str(exc))
 
     def _result(self, success, text):
-        self._message(text)
         firmware = getattr(self.window(), "firmwareInterface", None)
         if firmware is not None and firmware._active:
             return
+        (LOGGER.info if success else LOGGER.error)(text)
+        self.activityLabel.setText(text)
         if not self._closing:
-            (InfoBar.success if success else InfoBar.error)("操作成功" if success else "操作未完成", text, duration=6000, parent=self)
+            (InfoBar.success if success else InfoBar.error)("操作成功" if success else "操作未完成", text,
+                                                          duration=6000 if success else -1, parent=self)
 
     def shutdown(self):
         self._closing = True

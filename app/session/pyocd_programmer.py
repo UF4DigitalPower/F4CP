@@ -58,7 +58,7 @@ def session_options(pack, frequency, connect_mode):
             "hide_programming_progress": True, "user_script": os.devnull, "project_dir": os.getcwd()}
 
 
-def check_target(target):
+def check_target(target, segments=None):
     device_id = target.read32(0xE0042000) & 0xFFF
     capacity = target.read16(0x1FFF75E0)
     if device_id != 0x469 or capacity != 128:
@@ -67,6 +67,11 @@ def check_target(target):
     optr = target.read32(0x40022020)
     if optr & 0xFF != 0xAA or optr & (1 << 20) or target.read32(0x40010000) & 0x100:
         raise ValueError("目标存在读保护或 Bank 交换，拒绝自动解除保护")
+    if optr & 0x400000 and segments is not None:
+        if any(address < 0x08000000 or address + len(data) > 0x08010000
+               for address, data in segments):
+            raise ValueError("Flash 布局：当前 128 KiB G474 为双 Bank 模式，连续 BIN/HEX "
+                             "不能跨越 0x08010000；Bank 2 从 0x08040000 开始。未擦写，不自动修改 DBANK。")
     # Same protection registers/masks as OTA/target_update.c, for active banks.
     for bank in range(2 if optr & 0x400000 else 1):
         base = 0x40022000 + bank * 0x20
@@ -77,7 +82,8 @@ def check_target(target):
             value = target.read32(base + 0x2C + area * 4)
             if (value & 0x7F) <= ((value >> 16) & 0x7F):
                 raise ValueError("目标存在写保护，拒绝修改选项字节")
-    return f"{TARGET.upper()} · DEV_ID 0x{device_id:03X} · Flash {capacity} KiB"
+    layout = "双 Bank，起始连续区 64 KiB" if optr & 0x400000 else "单 Bank，连续 128 KiB"
+    return f"{TARGET.upper()} · DEV_ID 0x{device_id:03X} · Flash {capacity} KiB · {layout}"
 
 
 def image_segments(firmware):
@@ -95,8 +101,8 @@ def image_segments(firmware):
 def program_g474(session, firmware, progress, message):
     from pyocd.flash.file_programmer import FileProgrammer
     target = session.target
-    message(check_target(target))
     segments = image_segments(firmware)
+    message(check_target(target, segments))
     source = io.BytesIO(firmware.data) if firmware.suffix == ".bin" else io.StringIO(firmware.data.decode("ascii"))
     message("pyOCD 正在擦除和写入 G474…")
     FileProgrammer(session, progress=lambda value: progress(min(85, int(value * 85))),

@@ -50,9 +50,9 @@
         "MicaEnabled": true
     },
     "VersionCurrent": {
-        "App": "3.0.0.A2",
+        "App": "3.0.0.A3",
         "Power": "v1.4.2",
-        "Upper": "v0.4.2"
+        "Upper": "v0.4.4"
     },
     "VersionLatest": {
         "App": "v1.1.0.RC1",
